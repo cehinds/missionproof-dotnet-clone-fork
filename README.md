@@ -1,5 +1,15 @@
 # MissionProof
 
+## Design fork notice
+
+This repository is an independent **design fork** created to make UI suggestions and feedback easier to review with concrete examples. It is not the official MissionProof application, a replacement for it, or a source-accurate reproduction.
+
+The original source repository was not available when this fork was created. The prototype was reconstructed from the portions of the interface that were visible in the browser, including publicly rendered HTML and CSS, with help from AI and browser inspection tools. Missing layouts, behavior, and product rules were interpreted or approximated, so this implementation may differ substantially from the original application. It uses React with an ASP.NET Core/.NET host because .NET is the framework the contributor is most familiar with.
+
+### Note to the original designer
+
+The original application already has a strong visual identity and a polished overall experience. This fork is meant to respect and build on that work by illustrating possible alternatives—particularly a more mobile-friendly structure, less information presented at once, clearer navigation, larger default text, and a calmer document-review flow. These are exploratory suggestions for discussion, not criticisms or claims that the proposed versions are inherently better. The original designer should feel free to reuse, revise, reject, or build on any idea that is helpful.
+
 ## Proposal pack
 
 The detailed product redesign, .NET architecture, security, document-ingestion, testing, and six visual directions are indexed in [docs/README.md](docs/README.md).
