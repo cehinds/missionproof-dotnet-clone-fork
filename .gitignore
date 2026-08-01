@@ -1,0 +1,32 @@
+# Frontend dependencies and output
+node_modules/
+dist/
+
+# .NET output
+**/bin/
+**/obj/
+artifacts/
+.tmp/
+
+# Local environment and IDE files
+.env
+.env.*
+!.env.example
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db
+
+# Design-capture artifacts (kept locally, not in source control)
+source-extension-captures/
+implementation-extension-captures/
+qa-extension-comparisons/
+implementation-*.png
+qa-*.png
+design-qa.md

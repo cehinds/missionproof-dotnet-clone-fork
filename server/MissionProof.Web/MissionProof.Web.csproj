@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SpaRoot>..\..\</SpaRoot>
+    <SpaDist>$(SpaRoot)dist\client\</SpaDist>
+  </PropertyGroup>
+
+  <Target Name="BuildFrontend" BeforeTargets="Build" Condition="'$(SkipFrontendBuild)' != 'true'">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+  </Target>
+
+  <Target Name="PublishFrontend" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="BuildFrontend">
+    <ItemGroup>
+      <FrontendFiles Include="$(SpaDist)**\*" />
+      <ResolvedFileToPublish Include="@(FrontendFiles)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>
+
