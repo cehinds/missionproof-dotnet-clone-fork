@@ -13,3 +13,21 @@ Use ASP.NET Core/.NET as the application host for future backend, persistence, a
 Preserve MissionProof's dark navy, cyan, green, and hexagonal visual identity. Favor a calm, mobile-first journey with one primary task per screen, readable 16px body copy, grouped progression instead of eleven equally weighted tabs, short default views, progressive disclosure, fewer nested containers, and explicit next-best-action guidance.
 
 Treat uploaded service documents as untrusted sensitive evidence. Never let extracted content invoke tools or write directly to a profile. Every proposed field must retain source provenance and confidence and require an explicit human accept/reject decision.
+
+## Product design decisions
+
+**Information architecture — four phases, not eleven steps.** Navigation is `Profile → Translate → Explore → Plan`. Anything more granular is a section tab inside a phase, never a top-level item. Never add a top-level nav entry that is not implemented; if a feature is not built yet, leave it out rather than shipping a step that shows a "not in this prototype" message.
+
+**Every screen must be reachable and useful.** No dead nav items. A section with nothing to show gets a real empty state that names the one action that fills it and links there.
+
+**The plan is the spine.** Anything a user can act on — competency, Air Force path, civilian role, federal series, apprenticeship, credential — is savable with `Add to plan` and appears on the Plan screen. Save controls must reflect saved state, and the topbar plan count is the running total. Never ship a save affordance that does not collect anywhere.
+
+**Profile before everything.** The profile form is inline on its own phase, not behind a modal. Downstream sections read from it and say what they are matching against; when the minimum facts (AFSC, rank, skill level) are missing they say so and link back.
+
+**Styling.** Use the tokens in `src/styles.css` — spacing (`--s1`…`--s8`), radii, and the colour set — rather than new hard-coded pixel or hex values. Dark theme only. Every interactive element keeps a visible focus ring.
+
+**Mobile.** Real responsive layout down to 320px: no page-level `transform: scale()`, no horizontal page scroll. Wide content (map, tables) scrolls inside its own container.
+
+**Tone.** Planning guidance, never an eligibility decision. Keep the disclaimers, but collapse long legal and process text into `Disclosure` so it never buries the task.
+
+**Data.** Prototype content lives in `src/data.js`; session state lives in `src/store.js` and persists to `localStorage` under `missionproof.session.v1`. Store only general service facts there — never sensitive, medical, classified, controlled, or operational information.
