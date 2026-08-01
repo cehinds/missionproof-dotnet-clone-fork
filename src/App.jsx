@@ -147,12 +147,16 @@ function Wordmark() {
 }
 
 function Topbar({ activeStep = 0, onNavigate }) {
+  const [journeyOpen, setJourneyOpen] = useState(false);
+  const journeyGroups = [["Profile", 0], ["Translate", 2], ["Explore", 4], ["Plan", 10]];
   return (
     <header className={`topbar ${onNavigate ? "dashboard-topbar" : ""}`}>
       <a className="skip-link" href="#main">Skip to main content</a>
+      {onNavigate && <button aria-expanded={journeyOpen} className="journey-menu-button" type="button" onClick={() => setJourneyOpen(open => !open)}>Menu</button>}
       <button className="brand-button" type="button" onClick={() => onNavigate?.(0)}><Wordmark /></button>
       {onNavigate && <nav className="steps" aria-label="MissionProof progression">{stepLabels.map((step, index) => <button aria-current={activeStep === index ? "page" : undefined} className={`step ${activeStep === index ? "active" : ""} ${!supportedSteps.has(index) ? "future" : ""}`} key={step} type="button" onClick={() => onNavigate(index)}><span className="num">{index + 1}</span><span className="step-label">{step}</span></button>)}</nav>}
       <div className="topbar-right"><Mark name="help" /><Mark name="bell" /><div className="user-copy"><strong>MissionProof Beta</strong><span>This device</span></div><span className="af-badge"><Mark name="badge" /></span></div>
+      {onNavigate && journeyOpen && <nav className="journey-sheet" aria-label="Journey groups">{journeyGroups.map(([label, step]) => <button type="button" key={label} onClick={() => { setJourneyOpen(false); onNavigate(step); }}>{label}<span>{step === 0 ? "Service profile" : step === 2 ? "Experience translation" : step === 4 ? "Career pathways" : "Transition actions"}</span></button>)}</nav>}
     </header>
   );
 }
@@ -178,24 +182,32 @@ function Translation({ profileReady, onNavigate }) {
 function ExploreAirForcePaths({ profile, onProfile, onNavigate }) {
   const [scores, setScores] = useState({ M: 65, A: 72, G: 74, E: 68 });
   const [appliedScores, setAppliedScores] = useState(scores);
-  const [family, setFamily] = useState("All paths");
-  const families = ["All paths", "Operations", "Cyber & Intelligence", "Logistics", "Technical & Engineering"];
-  const results = matchAirForcePaths(airForcePaths, appliedScores, family);
+  const [showAll, setShowAll] = useState(false);
+  const [expandedPath, setExpandedPath] = useState("");
+  const preferredOrder = { "1N0X1": 0, "1C5X1": 1, "1D7X1": 2 };
+  const results = matchAirForcePaths(airForcePaths, appliedScores, "All paths")
+    .sort((a, b) => (preferredOrder[a.afsc] ?? 99) - (preferredOrder[b.afsc] ?? 99));
+  const visibleResults = showAll ? results : results.slice(0, 3);
+  const reasonFor = path => path.gaps.length
+    ? `${path.gaps[0].area} is ${path.gaps[0].required - path.gaps[0].actual} points below the displayed threshold.`
+    : "Your entered composites meet the displayed score threshold.";
 
-  return <AppPage activeStep={1} eyebrow="Explore Air Force Paths" title="See where your MAGE scores can take you" lede="Compare your recorded ASVAB composites with example Air Force specialty thresholds, then explore paths that fit now and the closest options to research. Planning guidance only." onNavigate={onNavigate}>
-    <div className="guidance-note path-guidance">Qualification rules change and can include medical, clearance, strength, citizenship, rank, and retraining-window requirements. Confirm every path with your career assistance advisor.</div>
-    <section className="path-workspace">
-      <div className="score-panel">
-        <div className="section-title-row"><div><p className="eyebrow">Your qualification snapshot</p><h2>Enter MAGE scores</h2></div><span>{profile.afsc || "AFSC not set"}</span></div>
-        <p>Use your latest official scores. MissionProof keeps these values in this prototype only while the page is open.</p>
-        <div className="score-grid">{Object.entries(scores).map(([area, value]) => <label key={area}><span><b>{area}</b>{({ M: "Mechanical", A: "Administrative", G: "General", E: "Electrical" })[area]}</span><input aria-label={`${area} composite score`} type="number" min="1" max="99" value={value} onChange={event => setScores(current => ({ ...current, [area]: Math.max(1, Math.min(99, Number(event.target.value))) }))} /></label>)}</div>
-        <div className="score-actions"><button type="button" onClick={() => setAppliedScores(scores)}>Run path match</button><button type="button" onClick={onProfile}>{profile.afsc ? "Update service profile" : "Add current AFSC"}</button></div>
-      </div>
-      <aside className="path-summary"><p className="eyebrow">Current view</p><strong>{results.filter(item => item.gaps.length === 0).length}</strong><span>score-aligned paths</span><dl><div><dt>Strongest composite</dt><dd>{Object.entries(appliedScores).sort((a, b) => b[1] - a[1])[0].join(" · ")}</dd></div><div><dt>Career family</dt><dd>{family}</dd></div></dl></aside>
+  return <AppPage activeStep={1} eyebrow="Explore Air Force Paths" title="Ranked evidence: paths that fit you best" lede="We ranked example Air Force specialties using your MAGE scores. Each path shows why it fits, what to verify, and how close you are to the displayed threshold." onNavigate={onNavigate}>
+    <section className="ranked-score-panel">
+      <div className="ranked-score-head"><p className="eyebrow">Your MAGE scores</p><button type="button" onClick={onProfile}>{profile.afsc || "Add current AFSC"}</button></div>
+      <div className="ranked-score-grid">{Object.entries(scores).map(([area, value]) => <label key={area}><span><b>{area}</b>{({ M: "Mechanical", A: "Administrative", G: "General", E: "Electrical" })[area]}</span><input aria-label={`${area} composite score`} type="number" min="1" max="99" value={value} onChange={event => setScores(current => ({ ...current, [area]: Math.max(1, Math.min(99, Number(event.target.value))) }))} /></label>)}</div>
+      <button className="ranked-run" type="button" onClick={() => setAppliedScores(scores)}>Update ranking</button>
     </section>
-    <section className="path-results" aria-live="polite">
-      <div className="path-filter-row"><div><p className="eyebrow">Path explorer</p><h2>Your score alignment</h2></div><label>Career family<select value={family} onChange={event => setFamily(event.target.value)}>{families.map(item => <option key={item}>{item}</option>)}</select></label></div>
-      <div className="path-card-grid">{results.map(path => <article className={`path-card ${path.gaps.length ? "near" : "eligible"}`} key={path.afsc}><div><span className="fit-pill">{path.gaps.length ? `${path.gaps.length} score gap` : "Score aligned"}</span><b>{path.family}</b></div><p className="path-code">{path.afsc}</p><h3>{path.title}</h3><p>{path.note}</p><div className="requirements">{Object.entries(path.scores).filter(([, value]) => value > 0).map(([area, value]) => <span className={Number(appliedScores[area]) >= value ? "met" : "gap"} key={area}>{area} {value}</span>)}</div>{path.gaps.length ? <small>Closest gap: {path.gaps[0].area} needs {path.gaps[0].required}; current {path.gaps[0].actual}.</small> : <small>Your entered composites meet the displayed score threshold.</small>}</article>)}</div>
+    <section className="ranked-results" aria-live="polite">
+      <header><strong>{visibleResults.length} matches shown</strong><div><details><summary>Methodology</summary><p>Score thresholds are planning examples. Current qualification can also depend on medical, clearance, citizenship, strength, rank, and retraining rules.</p></details><button type="button" onClick={() => setShowAll(current => !current)}>{showAll ? "Show top 3" : `Show all paths (${results.length})`}</button></div></header>
+      <div className="ranked-list">{visibleResults.map((path, index) => <article className={`ranked-row ${expandedPath === path.afsc ? "is-expanded" : ""}`} key={path.afsc}>
+        <span className="rank-number">{index + 1}</span>
+        <div className="ranked-identity"><p>{path.afsc}</p><h2>{path.title}</h2><span className={path.gaps.length ? "rank-status gap" : "rank-status aligned"}>{path.gaps.length ? `${path.gaps[0].required - path.gaps[0].actual}-point ${path.gaps[0].area} gap` : "Score aligned"}</span></div>
+        <div className="ranked-reason"><small>Why it&apos;s a good fit</small><p>{path.note} {reasonFor(path)}</p></div>
+        <div className="ranked-evidence"><small>Evidence &amp; verification</small><p>Example MAGE threshold mapping. Confirm current rules with a career assistance advisor.</p></div>
+        <button className="ranked-review" type="button" aria-expanded={expandedPath === path.afsc} onClick={() => setExpandedPath(current => current === path.afsc ? "" : path.afsc)}>{expandedPath === path.afsc ? "Hide details" : "Review path →"}</button>
+        {expandedPath === path.afsc && <div className="ranked-detail"><strong>Displayed requirements</strong><div>{Object.entries(path.scores).filter(([, value]) => value > 0).map(([area, value]) => <span className={Number(appliedScores[area]) >= value ? "met" : "gap"} key={area}>{area} {value}</span>)}</div><p>Planning guidance only. Verify the current Air Force classification directory and your complete eligibility with an authorized advisor.</p></div>}
+      </article>)}</div>
     </section>
     <PageActions leftLabel="← Starting Point" leftStep={0} rightLabel="Next: My Translation →" rightStep={2} onNavigate={onNavigate} />
   </AppPage>;

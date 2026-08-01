@@ -40,4 +40,14 @@ describe("MissionProof critical journeys", () => {
     await user.click(screen.getByRole("checkbox", { name: /Collect three mission-impact stories/ }));
     expect(screen.getByRole("heading", { name: "14% ready to brief" })).toBeVisible();
   });
+
+  it("reveals ranked path evidence on mobile-first Air Force paths", async () => {
+    window.history.replaceState({}, "", "/app/retrain");
+    const user = userEvent.setup();
+    render(<App />);
+    const pathHeading = screen.getByRole("heading", { name: "All Source Intelligence Analyst" });
+    const pathRow = pathHeading.closest("article");
+    await user.click(within(pathRow).getByRole("button", { name: "Review path →" }));
+    expect(within(pathRow).getByText("Displayed requirements")).toBeVisible();
+  });
 });
