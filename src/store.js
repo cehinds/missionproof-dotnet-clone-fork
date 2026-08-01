@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { emptyProfile } from "./data.js";
+import { calculatePlanProgress, togglePlanItem as togglePlanEntry } from "./domain/missionproof.js";
 
 const KEY = "missionproof.session.v1";
 
@@ -25,6 +26,10 @@ const defaults = {
   goal: "",
   profile: emptyProfile,
   plan: [],
+  completedTasks: [],
+  profileDraft: emptyProfile,
+  /* Persisted so a reload returns you to the screen you were on, not to the start. */
+  route: { phase: "profile", section: "setup" },
 };
 
 export function useSession() {
@@ -41,13 +46,16 @@ export function useSession() {
   const patch = useCallback(next => setState(current => ({ ...current, ...next })), []);
 
   const togglePlanItem = useCallback((item) => {
-    setState(current => {
-      const exists = current.plan.some(entry => entry.id === item.id);
-      return {
-        ...current,
-        plan: exists ? current.plan.filter(entry => entry.id !== item.id) : [...current.plan, item],
-      };
-    });
+    setState(current => ({ ...current, plan: togglePlanEntry(current.plan, item) }));
+  }, []);
+
+  const toggleTask = useCallback((id) => {
+    setState(current => ({
+      ...current,
+      completedTasks: current.completedTasks.includes(id)
+        ? current.completedTasks.filter(task => task !== id)
+        : [...current.completedTasks, id],
+    }));
   }, []);
 
   const reset = useCallback(() => {
@@ -69,9 +77,12 @@ export function useSession() {
     patch,
     reset,
     togglePlanItem,
+    toggleTask,
     inPlan: useCallback(id => state.plan.some(entry => entry.id === id), [state.plan]),
     profileComplete,
     profilePercent: Math.round((profileComplete / 5) * 100),
+    /* Milestone progress across the whole journey, not just the profile form. */
+    planProgress: calculatePlanProgress(state.completedTasks.length, state.plan.length, profileComplete),
     /* AFSC, rank, and skill level are the minimum needed to translate anything. */
     profileReady: Boolean(state.profile.afsc && state.profile.rank && state.profile.skill),
   };

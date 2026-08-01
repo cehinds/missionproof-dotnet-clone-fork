@@ -36,7 +36,8 @@ function Topbar({ route, onGo, planCount, onSearch }) {
 
   /* The rail scrolls horizontally on narrow screens; keep the current phase visible. */
   useEffect(() => {
-    railRef.current?.querySelector(".phase.is-active")?.scrollIntoView({ inline: "center", block: "nearest" });
+    const active = railRef.current?.querySelector(".phase.is-active");
+    active?.scrollIntoView?.({ inline: "center", block: "nearest" });
   }, [route.phase]);
 
   return (
@@ -164,15 +165,16 @@ function GoalDialog({ onChoose }) {
 
 export function App() {
   const session = useSession();
-  const [route, setRoute] = useState({ phase: "profile", section: "setup" });
   const [searchOpen, setSearchOpen] = useState(false);
+  const { route, patch } = session;
 
-  const go = useCallback((phase, section) => {
+  /* focus optionally preselects a filter on the destination, so a search result lands on the item. */
+  const go = useCallback((phase, section, focus) => {
     const target = phases.find(item => item.id === phase) || phases[0];
     const nextSection = target.sections.some(item => item.id === section) ? section : target.sections[0].id;
-    setRoute({ phase: target.id, section: nextSection });
+    patch({ route: { phase: target.id, section: nextSection, focus: focus || null } });
     window.scrollTo?.({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [patch]);
 
   /* "/" opens search from anywhere, as long as the user is not typing into a field. */
   useEffect(() => {
@@ -207,7 +209,11 @@ export function App() {
     <div className="app">
       <Topbar route={route} onGo={go} planCount={session.plan.length} onSearch={() => setSearchOpen(true)} />
       <main className="content" id="main">
-        <Section session={session} onGo={go} />
+        <Section
+          key={`${route.phase}/${route.section}/${JSON.stringify(route.focus || null)}`}
+          session={session}
+          onGo={go}
+        />
         <footer className="app-footer">
           <span className="muted small">MissionProof beta · planning guidance only, not an eligibility decision.</span>
           <button type="button" className="button-link" onClick={session.reset}>Reset device data</button>
@@ -224,7 +230,7 @@ export function App() {
         />
       )}
 
-      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} onGo={go} />}
+      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} onGo={go} session={session} />}
     </div>
   );
 }

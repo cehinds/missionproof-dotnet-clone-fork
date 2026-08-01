@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import {
-  afscPaths, apprenticeshipTracks, civilianFields, civilianResults, credentialCatalog,
-  credentialLanes, federalLenses, federalSeries, mapDatasets, mapRegions, mapStateRows,
+  airForcePaths, apprenticeshipTracks, civilianFields, civilianResults, compositeNames,
+  credentialCatalog, credentialLanes, federalLenses, federalSeries, mapDatasets, mapRegions,
+  mapStateRows, pathFamilies, populatedState,
 } from "../data.js";
+import { matchAirForcePaths } from "../domain/missionproof.js";
 import { ChipGroup, Disclosure, EmptyState, Mark, NextStep, Note, Pill, SaveButton, SectionHead } from "../ui.jsx";
 
 function ProfileHint({ profile, onGo }) {
@@ -28,46 +30,115 @@ function ProfileHint({ profile, onGo }) {
 
 export function AfscPathsSection({ session, onGo }) {
   const { togglePlanItem, inPlan, profile } = session;
-  const [query, setQuery] = useState("");
-  const results = afscPaths.filter(path =>
-    `${path.code} ${path.title} ${path.note} ${path.civilian}`.toLowerCase().includes(query.trim().toLowerCase()));
+  /*
+   * Composites stay in component state and are never persisted — they are the most
+   * identifying thing a user can type here, and they are only needed to compute gaps.
+   */
+  /* Raw strings while editing: coercing on every keystroke made the field impossible to retype. */
+  const [scores, setScores] = useState({ M: "65", A: "72", G: "74", E: "68" });
+  const [appliedScores, setAppliedScores] = useState({ M: 65, A: 72, G: 74, E: 68 });
+  const [family, setFamily] = useState("All paths");
+
+  const results = useMemo(
+    () => matchAirForcePaths(airForcePaths, appliedScores, family),
+    [appliedScores, family],
+  );
+  const aligned = results.filter(path => !path.gaps.length).length;
+  const strongest = Object.entries(appliedScores).sort((a, b) => b[1] - a[1])[0];
+  const clamp = value => Math.max(1, Math.min(99, Number(value) || 1));
+  const pending = Object.keys(scores).some(area => clamp(scores[area]) !== appliedScores[area]);
 
   return (
     <>
       <SectionHead
         eyebrow="Air Force paths"
-        title="Retraining paths open to you"
-        lede="Specialties commonly reachable from your record, with the MAGE line each one tests against and the civilian role it feeds. Confirm current requirements with your career-field manager."
+        title="See where your MAGE scores can take you"
+        lede="Compare your recorded ASVAB composites with example specialty thresholds, then explore the paths that fit now and the closest ones to research."
+        aside={
+          <div className="completion-badge">
+            <strong>{aligned}</strong>
+            <span>Score-aligned paths</span>
+          </div>
+        }
       />
-      <ProfileHint profile={profile} onGo={onGo} />
+      {/* No ProfileHint here: these results come from the composites below, not from the AFSC. */}
+      <Note tone="warn">
+        Qualification rules change and can include medical, clearance, strength, citizenship, rank, and retraining-window
+        requirements. Confirm every path with your career assistance advisor.
+      </Note>
 
-      <label className="search-field">
-        <span>Filter paths</span>
-        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="cyber, logistics, finance, 3D0X2" />
-      </label>
+      <div className="panel score-panel">
+        <div className="results-head">
+          <h2>Enter your MAGE scores</h2>
+          {profile.afsc
+            ? <span>Current AFSC {profile.afsc}</span>
+            : <button type="button" className="button-link" onClick={() => onGo("profile", "setup")}>Add your current AFSC</button>}
+        </div>
+        <p className="muted">
+          Use your latest official scores. These stay on this screen only — they are not saved with the rest of your profile.
+        </p>
+        <div className="score-grid">
+          {Object.entries(scores).map(([area, value]) => (
+            <label key={area}>
+              <span><b>{area}</b>{compositeNames[area]}</span>
+              <input
+                type="number"
+                min="1"
+                max="99"
+                aria-label={`${compositeNames[area]} composite score`}
+                value={value}
+                onChange={event => setScores(current => ({ ...current, [area]: event.target.value.replace(/[^0-9]/g, "").slice(0, 2) }))}
+              />
+            </label>
+          ))}
+        </div>
+        <div className="form-actions">
+          <button type="button" className="button-primary" disabled={!pending} onClick={() => setAppliedScores(Object.fromEntries(Object.entries(scores).map(([area, value]) => [area, clamp(value)])))}>
+            {pending ? "Run path match" : "Results are current"}
+          </button>
+          <small>Strongest composite: {strongest[0]} · {strongest[1]}</small>
+        </div>
+      </div>
+
+      <div className="results-head">
+        <h2>Your score alignment</h2>
+        <span>{results.length} paths</span>
+      </div>
+      <ChipGroup label="Career family" options={pathFamilies} value={family} onChange={setFamily} />
 
       {results.length ? (
-        <div className="card-grid three">
+        <div className="card-grid three" aria-live="polite">
           {results.map(path => {
-            const id = `afsc:${path.code}`;
+            const id = `afsc:${path.afsc}`;
+            const gap = path.gaps[0];
             return (
-              <article className="panel result-card" key={path.code}>
+              <article className="panel result-card" key={path.afsc}>
                 <div className="card-top">
-                  <Pill tone="blue">{path.code}</Pill>
-                  <SaveButton active={inPlan(id)} onClick={() => togglePlanItem({ id, kind: "afsc", title: `${path.code} — ${path.title}`, detail: path.mage })} />
+                  <Pill tone={gap ? "amber" : "teal"}>{gap ? `${path.gaps.length} score gap` : "Score aligned"}</Pill>
+                  <SaveButton
+                    active={inPlan(id)}
+                    onClick={() => togglePlanItem({ id, kind: "afsc", title: `${path.afsc} — ${path.title}`, detail: gap ? `${path.gaps.length} score gap` : "Score aligned" })}
+                  />
                 </div>
+                <p className="path-code">{path.afsc} · {path.family}</p>
                 <h3>{path.title}</h3>
                 <p className="muted">{path.note}</p>
-                <dl className="mini-facts">
-                  <div><dt>MAGE line</dt><dd>{path.mage}</dd></div>
-                  <div><dt>Civilian equivalent</dt><dd>{path.civilian}</dd></div>
-                </dl>
+                <ul className="tag-row requirements">
+                  {Object.entries(path.scores).filter(([, value]) => value > 0).map(([area, value]) => (
+                    <li key={area} className={Number(appliedScores[area]) >= value ? "met" : "gap"}>{area} {value}</li>
+                  ))}
+                </ul>
+                <p className="muted small">
+                  {gap
+                    ? `Closest gap: ${gap.area} needs ${gap.required}; yours is ${gap.actual}.`
+                    : "Your entered composites meet the displayed thresholds."}
+                </p>
               </article>
             );
           })}
         </div>
       ) : (
-        <EmptyState title="No paths match that filter">Try a broader term such as cyber, logistics, emergency, or finance.</EmptyState>
+        <EmptyState title="No paths in this career family">Choose “All paths” to see every specialty in the example set.</EmptyState>
       )}
 
       <NextStep label="Civilian roles →" onClick={() => onGo("explore", "civilian")} />
@@ -76,9 +147,9 @@ export function AfscPathsSection({ session, onGo }) {
 }
 
 export function CivilianSection({ session, onGo }) {
-  const { profile, togglePlanItem, inPlan } = session;
-  const [field, setField] = useState("Best fits");
-  const results = civilianResults[field] || civilianResults["Best fits"];
+  const { profile, togglePlanItem, inPlan, route } = session;
+  const [field, setField] = useState(route.focus?.field || "Research leads");
+  const results = civilianResults[field] || civilianResults["Research leads"];
 
   return (
     <>
@@ -127,8 +198,8 @@ export function CivilianSection({ session, onGo }) {
 }
 
 export function FederalSection({ session, onGo }) {
-  const { profile, togglePlanItem, inPlan } = session;
-  const [lens, setLens] = useState("Intelligence analysis");
+  const { profile, togglePlanItem, inPlan, route } = session;
+  const [lens, setLens] = useState(route.focus?.lens || "Intelligence analysis");
   const [query, setQuery] = useState("");
 
   /* A four-digit entry is treated as a series number; anything else filters the lens list. */
@@ -226,13 +297,15 @@ export function MapSection({ onGo }) {
         <select id="map-dataset" value={dataset} onChange={event => { setDataset(event.target.value); setSelectedState(""); }}>
           {mapDatasets.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}
         </select>
-        <div className="toolbar-group" role="group" aria-label="Map layers">
-          {[["bases", "Bases"], ["cities", "Cities"], ["pay", "Pay lens"]].map(([key, label]) => (
-            <button type="button" key={key} className={layers[key] ? "is-active" : ""} aria-pressed={layers[key]} onClick={() => toggleLayer(key)}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {view === "map" && (
+          <div className="toolbar-group" role="group" aria-label="Map layers">
+            {[["bases", "Bases"], ["cities", "Cities"], ["pay", "Pay lens"]].map(([key, label]) => (
+              <button type="button" key={key} className={layers[key] ? "is-active" : ""} aria-pressed={layers[key]} onClick={() => toggleLayer(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="toolbar-group" role="group" aria-label="Map view">
           {[["map", "Map"], ["regions", "Regions"], ["table", "Table"]].map(([key, label]) => (
             <button type="button" key={key} className={view === key ? "is-active" : ""} aria-pressed={view === key} onClick={() => setView(key)}>
@@ -286,38 +359,49 @@ export function MapSection({ onGo }) {
             <div className="map-legend">
               <span>fewer jobs</span><i /><span>more</span>
             </div>
-            {layers.bases && (
-              <div className="service-legend">
-                {["AF", "Space Force", "Army", "Navy", "USMC", "Joint"].map(service => (
-                  <span key={service}><i />{service}</span>
-                ))}
-              </div>
-            )}
+            {/* No service legend here: the heatmap is a static image with no base markers to key. */}
           </div>
 
           <aside className="panel map-detail" aria-live="polite">
             {selectedState ? (
-              <>
-                <p className="eyebrow">State drill-in</p>
-                <h3>{selectedState}</h3>
-                <strong className="big-number">{selectedState === "Texas" ? "1,311" : "—"}</strong>
-                <span className="muted">collected opportunities</span>
-                <dl className="mini-facts">
-                  <div><dt>Top role</dt><dd>{selectedState === "Texas" ? "Oilfield Operations" : "Program Management"}</dd></div>
-                  <div><dt>Top city</dt><dd>{selectedState === "Texas" ? "Dallas–Fort Worth" : "Regional market"}</dd></div>
-                  <div><dt>Top base</dt><dd>{selectedState === "Texas" ? "Joint Base San Antonio – Lackland" : "View installation mix"}</dd></div>
-                </dl>
-                <button type="button" className="button-ghost" onClick={() => setSelectedState("")}>Clear selection</button>
-              </>
+              selectedState === populatedState ? (
+                <>
+                  <p className="eyebrow">State drill-in</p>
+                  <h3>{selectedState}</h3>
+                  <strong className="big-number">1,311</strong>
+                  <span className="muted">collected opportunities</span>
+                  <dl className="mini-facts">
+                    <div><dt>Top role</dt><dd>Oilfield Operations</dd></div>
+                    <div><dt>Top city</dt><dd>Dallas–Fort Worth</dd></div>
+                    <div><dt>Top base</dt><dd>Joint Base San Antonio – Lackland</dd></div>
+                  </dl>
+                  <button type="button" className="button-ghost" onClick={() => setSelectedState("")}>Clear selection</button>
+                </>
+              ) : (
+                /* Every other state has no drill-in data; say that rather than show a dash as a value. */
+                <>
+                  <p className="eyebrow">State drill-in</p>
+                  <h3>{selectedState}</h3>
+                  <Note tone="warn">
+                    Only {populatedState} carries drill-in data in this prototype. State totals in the table are real
+                    collected counts; the occupation, city, and installation breakdown is not wired up yet.
+                  </Note>
+                  <button type="button" className="button-ghost" onClick={() => setSelectedState(populatedState)}>
+                    Show {populatedState} instead
+                  </button>
+                </>
+              )
             ) : (
               <>
                 <p className="eyebrow">Drill in</p>
                 <p className="muted">Select a state on the map, in Regions, or in Table to see its occupation mix, top cities, and installations.</p>
-                {layers.pay && <div className="callout"><strong>Pay lens</strong><span>Published ranges only; hourly and estimated pay are excluded.</span></div>}
-                {layers.cities && <div className="callout"><strong>Top cities</strong><span>Dallas–Fort Worth · Washington, D.C. · Seattle · Austin</span></div>}
-                {layers.bases && <div className="callout"><strong>112 installations</strong><span>Air Force, Space Force, Army, Navy, USMC, and Joint.</span></div>}
               </>
             )}
+
+            {/* Layer callouts render in both branches — turning a layer on used to blank it out on selection. */}
+            {layers.pay && <div className="callout"><strong>Pay lens</strong><span>Published ranges only; hourly and estimated pay are excluded.</span></div>}
+            {layers.cities && <div className="callout"><strong>Top cities</strong><span>Dallas–Fort Worth · Washington, D.C. · Seattle · Austin</span></div>}
+            {layers.bases && <div className="callout"><strong>112 installations</strong><span>Air Force, Space Force, Army, Navy, USMC, and Joint.</span></div>}
           </aside>
         </div>
       )}
@@ -372,9 +456,9 @@ export function ApprenticeshipSection({ session, onGo }) {
 }
 
 export function CredentialSection({ session, onGo }) {
-  const { profile, plan, togglePlanItem, inPlan } = session;
+  const { profile, plan, togglePlanItem, inPlan, route } = session;
   const [lane, setLane] = useState("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(route.focus?.query || "");
 
   /* Credentials the user's saved competencies point at come first; the rest stay searchable. */
   const savedCompetencies = useMemo(

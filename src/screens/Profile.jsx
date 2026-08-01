@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { emptyProfile, goals, profileFields } from "../data.js";
+import { emptyProfile, goalDestinations, goals, profileFields } from "../data.js";
 import { ChipGroup, EmptyState, Mark, Meter, NextStep, Note, SectionHead } from "../ui.jsx";
 
 function summaryLine(profile) {
@@ -14,24 +14,28 @@ function summaryLine(profile) {
  */
 export function ProfileSection({ session, onGo }) {
   const { profile, goal, profilePercent, profileReady, patch } = session;
-  const [draft, setDraft] = useState(profile);
+  /*
+   * The draft lives in the session, not component state: leaving the phase mid-edit used
+   * to discard the one input every other section depends on, without a word.
+   */
+  const draft = session.profileDraft;
   const [savedAt, setSavedAt] = useState(false);
   const dirty = profileFields.some(field => (draft[field.key] || "") !== (profile[field.key] || ""));
+  const empty = profileFields.every(field => !String(draft[field.key] ?? "").trim());
 
   const set = (key, value) => {
-    setDraft(current => ({ ...current, [key]: value }));
+    patch({ profileDraft: { ...draft, [key]: value } });
     setSavedAt(false);
   };
 
   const save = event => {
     event.preventDefault();
-    patch({ profile: draft });
+    patch({ profile: draft, profileDraft: draft });
     setSavedAt(true);
   };
 
   const clear = () => {
-    setDraft(emptyProfile);
-    patch({ profile: emptyProfile });
+    patch({ profile: emptyProfile, profileDraft: emptyProfile });
     setSavedAt(false);
   };
 
@@ -81,7 +85,7 @@ export function ProfileSection({ session, onGo }) {
 
           <div className="form-actions">
             <button type="submit" className="button-primary" disabled={!dirty}>
-              {dirty ? "Save profile" : savedAt ? "Saved" : "Up to date"}
+              {dirty || empty ? "Save profile" : savedAt ? "Saved" : "Up to date"}
             </button>
             <button type="button" className="button-link" onClick={clear}>
               Clear
@@ -109,7 +113,11 @@ export function ProfileSection({ session, onGo }) {
             label="Choose your goal"
             options={goals.map(item => ({ name: item.name, sub: item.description }))}
             value={goal}
-            onChange={name => patch({ goal: name })}
+            onChange={name => {
+              patch({ goal: name });
+              const destination = goalDestinations[name];
+              if (destination) onGo(destination[0], destination[1]);
+            }}
           />
         </aside>
       </div>

@@ -92,7 +92,7 @@ export const translationCards = [
 ];
 
 export const civilianFields = [
-  ["Best fits", "Across all fields"],
+  ["Research leads", "Across all fields"],
   ["Operations", "Mission execution"],
   ["Program management", "Plans and delivery"],
   ["Cyber & IT", "Systems and security"],
@@ -101,7 +101,7 @@ export const civilianFields = [
 ];
 
 export const civilianResults = {
-  "Best fits": [
+  "Research leads": [
     ["Operations Coordinator", "Strong transfer", "Planning, cross-team coordination, and mission execution map directly."],
     ["Project Coordinator", "Good fit", "Your service evidence supports schedules, stakeholders, and risk tracking."],
     ["Training Specialist", "Build one gap", "Instructional experience transfers; add a civilian training credential."],
@@ -128,12 +128,12 @@ export const civilianResults = {
   ],
 };
 
+/* Only pathways with series behind them — a chip that returns nothing is a dead control. */
 export const federalLenses = [
-  "Medical / health", "Intelligence analysis", "Cyber / IT", "Program management",
+  "Intelligence analysis", "Cyber / IT", "Program management",
   "Management and program analysis", "Contracting / acquisition", "Budget / financial management",
   "Logistics / supply", "Training instruction", "Safety / emergency management",
-  "Security / investigations", "Aviation / technical", "Human resources", "Weather",
-  "Public affairs", "Fire protection", "Aircraft maintenance", "Skilled trades (WG)",
+  "Security / investigations", "Aircraft maintenance",
 ];
 
 /* Series shown for a lens; every entry is a research starting point, not an eligibility decision. */
@@ -173,15 +173,56 @@ export const apprenticeshipTracks = [
   { title: "Logistics Support Specialist", hours: "4,000 on-the-job hours", note: "Inventory accountability and distribution duties transfer directly." },
 ];
 
-/* Retraining paths, the screen that used to be a dead nav item. */
-export const afscPaths = [
-  { code: "3D0X2", title: "Cyber Systems Operations", mage: "General 64", note: "Systems administration and network operations across base infrastructure.", civilian: "IT Support Specialist" },
-  { code: "1C0X2", title: "Aviation Resource Management", mage: "Administrative 55", note: "Flight records, scheduling, and aviation program administration.", civilian: "Operations Coordinator" },
-  { code: "3E9X1", title: "Emergency Management", mage: "General 62", note: "Readiness planning, hazard response, and installation exercises.", civilian: "Business Continuity Specialist" },
-  { code: "2S0X1", title: "Materiel Management", mage: "Administrative 41", note: "Supply accountability, distribution, and inventory control.", civilian: "Logistics Coordinator" },
-  { code: "6F0X1", title: "Financial Management", mage: "Administrative 60", note: "Budget execution, disbursement, and financial services.", civilian: "Program Analyst" },
-  { code: "5R0X1", title: "Chaplain Assistant", mage: "Administrative 41", note: "Program coordination, counseling support, and resiliency programs.", civilian: "Training Specialist" },
+/*
+ * Air Force paths carry the score thresholds each specialty tests against, so
+ * matchAirForcePaths() in src/domain/missionproof.js can compute real gaps against the
+ * composites a user enters rather than restating a fixed label.
+ */
+export const airForcePaths = [
+  { afsc: "1D7X1", title: "Cyber Defense Operations", family: "Cyber & Intelligence", scores: { M: 45, A: 41, G: 64, E: 70 }, note: "Protect networks, operate enterprise systems, and respond to cyber incidents." },
+  { afsc: "1N0X1", title: "All Source Intelligence Analyst", family: "Cyber & Intelligence", scores: { M: 0, A: 0, G: 62, E: 0 }, note: "Synthesize intelligence, brief leaders, and support operational decisions." },
+  { afsc: "1C5X1", title: "Command and Control Battle Management", family: "Operations", scores: { M: 0, A: 0, G: 55, E: 0 }, note: "Coordinate command-and-control systems and build a shared operational picture." },
+  { afsc: "2G0X1", title: "Logistics Plans", family: "Logistics", scores: { M: 0, A: 56, G: 0, E: 0 }, note: "Plan force movement, readiness, deployment, and logistics support." },
+  { afsc: "2T2X1", title: "Air Transportation", family: "Logistics", scores: { M: 47, A: 0, G: 0, E: 0 }, note: "Move passengers and cargo safely through military air terminals." },
+  { afsc: "3E5X1", title: "Engineering", family: "Technical & Engineering", scores: { M: 0, A: 0, G: 49, E: 0 }, note: "Survey, draft, inspect, and support installation engineering projects." },
 ];
+
+export const pathFamilies = ["All paths", "Operations", "Cyber & Intelligence", "Logistics", "Technical & Engineering"];
+
+export const compositeNames = { M: "Mechanical", A: "Administrative", G: "General", E: "Electrical" };
+
+/* One catalog searched across all three interpretations of a skill. */
+export const skillSearchCatalog = [
+  { id: "civilian-program-analyst", type: "Civilian role", title: "Program Analyst", detail: "Turn plans, milestones, risks, and performance evidence into program decisions.", tags: ["planning", "analysis", "leadership", "program management"] },
+  { id: "federal-0343", type: "Federal series", title: "0343 — Management & Program Analysis", detail: "A research lead for program evaluation, process improvement, and advisory work.", tags: ["planning", "analysis", "process improvement", "leadership"] },
+  { id: "credential-pmp", type: "Credential", title: "Project Management Professional (PMP)", detail: "Validates project leadership, schedules, risks, and stakeholder coordination.", tags: ["planning", "leadership", "project management"] },
+  { id: "civilian-cyber", type: "Civilian role", title: "Cybersecurity Analyst", detail: "Apply systems knowledge, incident response, and risk-control evidence.", tags: ["cyber", "security", "risk management", "technical"] },
+  { id: "federal-2210", type: "Federal series", title: "2210 — Information Technology Management", detail: "Federal pathway spanning customer support, systems, policy, and cybersecurity.", tags: ["cyber", "security", "technical", "systems"] },
+  { id: "credential-security", type: "Credential", title: "CompTIA Security+", detail: "Baseline cybersecurity operations, threats, architecture, and risk controls.", tags: ["cyber", "security", "technical"] },
+  { id: "civilian-training", type: "Civilian role", title: "Training & Development Specialist", detail: "Translate qualification, briefing, coaching, and curriculum experience.", tags: ["training", "instruction", "leadership", "communication"] },
+  { id: "federal-1712", type: "Federal series", title: "1712 — Training Instruction", detail: "Research lead for formal instruction, curriculum, and workforce development.", tags: ["training", "instruction", "communication"] },
+  { id: "civilian-logistics", type: "Civilian role", title: "Logistics Coordinator", detail: "Connect readiness, inventory accountability, movement, and mission support.", tags: ["logistics", "operations", "planning", "supply"] },
+  { id: "credential-cltd", type: "Credential", title: "Certified in Logistics, Transportation and Distribution", detail: "Validates logistics planning, distribution, and supply-chain operations.", tags: ["logistics", "supply", "operations"] },
+];
+
+export const skillPrompts = ["planning", "leadership", "cyber", "training", "logistics", "risk management"];
+
+/* Maps a skill-catalog type onto the plan grouping used by the Plan screen. */
+export const catalogKinds = { "Civilian role": "role", "Federal series": "federal", Credential: "credential" };
+
+/* Where each catalog entry actually lives, so a search result lands on the item, not near it. */
+export const catalogDestinations = {
+  "civilian-program-analyst": ["explore", "civilian", { field: "Program management" }],
+  "federal-0343": ["explore", "federal", { lens: "Management and program analysis" }],
+  "credential-pmp": ["explore", "credentials", { query: "Project Management Professional" }],
+  "civilian-cyber": ["explore", "civilian", { field: "Cyber & IT" }],
+  "federal-2210": ["explore", "federal", { lens: "Cyber / IT" }],
+  "credential-security": ["explore", "credentials", { query: "Security+" }],
+  "civilian-training": ["explore", "civilian", { field: "Training" }],
+  "federal-1712": ["explore", "federal", { lens: "Training instruction" }],
+  "civilian-logistics": ["explore", "civilian", { field: "Logistics" }],
+  "credential-cltd": ["explore", "credentials", { query: "Logistics, Transportation" }],
+};
 
 export const mapDatasets = [
   { label: "All collected (14,208)", value: "all", count: "14,208", top: "Texas (1311)", remote: "696" },
@@ -201,6 +242,8 @@ export const mapRegions = [
   ["#6", "Washington", "42", "669 jobs · 75,719 personnel", "Software Engineering", "Joint Base Lewis-McChord"],
 ];
 
+export const populatedState = "Texas";
+
 export const mapStateRows = [
   ["Texas", "1,311"], ["California", "765"], ["Virginia", "740"], ["Washington", "669"], ["Florida", "591"],
   ["Ohio", "492"], ["New York", "468"], ["Georgia", "460"], ["Illinois", "427"], ["North Carolina", "420"],
@@ -213,3 +256,13 @@ export const planStageLabels = {
   credential: "Credential",
   afsc: "Air Force path",
 };
+
+export const afscLookupHint = "Saved leads collect on your Transition Plan.";
+
+/* The four dated moves the plan is built around. */
+export const transitionTasks = [
+  { id: "task-evidence", phase: "Now · 0–30 days", title: "Collect three mission-impact stories", detail: "Write the situation, your action, and a measurable outcome — without sensitive details." },
+  { id: "task-target", phase: "Next · 30–90 days", title: "Validate one target pathway", detail: "Compare your evidence with live role requirements and record the gaps." },
+  { id: "task-credential", phase: "Before separation", title: "Confirm funding and credential timing", detail: "Verify current AF COOL rules with your education office before committing funds." },
+  { id: "task-network", phase: "Launch", title: "Run a warm-introduction sprint", detail: "Schedule five conversations with people doing the work you want next." },
+];
