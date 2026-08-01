@@ -147,12 +147,16 @@ function Wordmark() {
 }
 
 function Topbar({ activeStep = 0, onNavigate }) {
+  const [journeyOpen, setJourneyOpen] = useState(false);
+  const journeyGroups = [["Profile", 0], ["Translate", 2], ["Explore", 4], ["Plan", 10]];
   return (
     <header className={`topbar ${onNavigate ? "dashboard-topbar" : ""}`}>
       <a className="skip-link" href="#main">Skip to main content</a>
+      {onNavigate && <button aria-expanded={journeyOpen} className="journey-menu-button" type="button" onClick={() => setJourneyOpen(open => !open)}>Menu</button>}
       <button className="brand-button" type="button" onClick={() => onNavigate?.(0)}><Wordmark /></button>
       {onNavigate && <nav className="steps" aria-label="MissionProof progression">{stepLabels.map((step, index) => <button aria-current={activeStep === index ? "page" : undefined} className={`step ${activeStep === index ? "active" : ""} ${!supportedSteps.has(index) ? "future" : ""}`} key={step} type="button" onClick={() => onNavigate(index)}><span className="num">{index + 1}</span><span className="step-label">{step}</span></button>)}</nav>}
       <div className="topbar-right"><Mark name="help" /><Mark name="bell" /><div className="user-copy"><strong>MissionProof Beta</strong><span>This device</span></div><span className="af-badge"><Mark name="badge" /></span></div>
+      {onNavigate && journeyOpen && <nav className="journey-sheet" aria-label="Journey groups">{journeyGroups.map(([label, step]) => <button type="button" key={label} onClick={() => { setJourneyOpen(false); onNavigate(step); }}>{label}<span>{step === 0 ? "Service profile" : step === 2 ? "Experience translation" : step === 4 ? "Career pathways" : "Transition actions"}</span></button>)}</nav>}
     </header>
   );
 }
@@ -165,10 +169,33 @@ function AppPage({ activeStep, eyebrow, title, lede, onNavigate, children }) {
   return <main className="mp-dashboard dashboard" id="main"><div className="shell"><Topbar activeStep={activeStep} onNavigate={onNavigate} /><div className="content-wrap">{title && <section className="feature-head"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{lede}</p></section>}{children}</div></div></main>;
 }
 
-function StartingPoint({ selectedGoal, profile, onProfile, onReset, onNavigate }) {
-  const complete = Object.values(profile).filter(Boolean).length;
-  const percent = Math.round((complete / 5) * 100);
-  return <AppPage activeStep={0} eyebrow="Starting Point" title="" lede="" onNavigate={onNavigate}><section className="guided-panel"><div className="profile-hex"><Mark name="user-large" /></div><div className="guided-copy"><p className="eyebrow">Starting Point</p><h1>Guided Setup — You&apos;re in Control</h1><p>Confirm a few service facts so MissionProof can build your profile and surface the right opportunities.</p></div><div className="field"><span>Current AFSC</span><strong>{profile.afsc || "Not set"}</strong><small>{profile.afsc ? "Primary specialty" : "Open Update Profile to set"}</small></div><div className="field"><span>Skill Level</span><strong>{profile.skill || "Not set"}</strong><small>{profile.skill ? "Recorded" : "—"}</small></div><div className="field"><span>Career Stage</span><strong>{profile.rank || "Not set"}</strong><small>{profile.rank ? `${profile.years || 0} yrs` : "—"}</small></div><label className="field goal-select"><span>Goal</span><select value={selectedGoal} onChange={() => {}}><option value="">Choose a goal</option>{goals.map(goal => <option key={goal.name}>{goal.name}</option>)}</select><small>What do you want to do?</small></label><div className="target-block"><span>Your target</span><button type="button" onClick={() => onNavigate(4)}>Pick a target →</button><small>Explore credentials, a federal/civilian role, or run a gap analysis.</small></div><div className="completion"><div><span>Profile Completion</span><strong>{percent}%</strong></div><div className="progress"><i style={{ width: `${Math.max(3, percent)}%` }} /></div><p>{percent === 100 ? "Your core service facts are ready." : <>To finish, add: <strong>Primary AFSC, Rank, Skill level, Education…</strong></>}</p><button type="button" className="compact-primary" onClick={onProfile}>Input MissionProof</button><div className="dev-controls"><button type="button" onClick={onProfile}>Update profile</button><span>·</span><button type="button" onClick={onReset}>Reset device data</button></div></div></section><section className="dashboard-grid"><article className="dash-card"><span className="eyebrow">Best for LinkedIn</span><strong>{percent ? "Your profile is ready to grow" : "Build your profile first"}</strong><p>Your strongest evidence-backed skills become a copy-paste LinkedIn block here.</p></article><article className="dash-card"><span className="eyebrow">Mission readiness</span><strong>{percent ? "Keep translating your evidence" : "Start with your service facts"}</strong><p>MissionProof uses the facts you add to tailor every recommendation.</p><button className="text-link" type="button" onClick={() => onNavigate(2)}>View my translation →</button></article></section></AppPage>;
+function StartingPoint({ profile, onProfile, onSaveAfsc, onNavigate }) {
+  const [afsc, setAfsc] = useState(profile.afsc);
+  const continueJourney = event => {
+    event.preventDefault();
+    if (!afsc.trim()) return;
+    onSaveAfsc(afsc.trim().toUpperCase());
+    onNavigate(2);
+  };
+
+  return <AppPage activeStep={0} eyebrow="Starting Point" title="" lede="" onNavigate={onNavigate}>
+    <form className="guided-journey" onSubmit={continueJourney}>
+      <div className="guided-journey-intro">
+        <div className="profile-hex guided-journey-hex"><Mark name="user-large" /></div>
+        <div><p>Step 2 of 4</p><h1>Service profile</h1><div className="guided-journey-progress" aria-label="Halfway through service profile setup"><i /></div></div>
+      </div>
+      <section className="guided-journey-question">
+        <h2>What is your primary AFSC?</h2>
+        <p>Your AFSC helps us personalize opportunities, resources, and matches that fit your experience.</p>
+        <label htmlFor="guided-afsc">Primary AFSC</label>
+        <input id="guided-afsc" value={afsc} onChange={event => setAfsc(event.target.value)} placeholder="e.g., 1B4X1, 2A6X2, 3E5X1" autoCapitalize="characters" />
+        <p className="guided-example"><strong>Example:</strong> 1B4X1 (Cyber Operations)</p>
+      </section>
+      <button className="guided-prefill" type="button" onClick={onProfile}><Mark name="credentials" /><span><strong>Prefill from a document (optional)</strong><small>You can review and confirm before saving.</small></span></button>
+      <div className="guided-privacy"><span><strong>Your information stays private</strong><small>Use general, non-sensitive service facts only. Nothing changes until you confirm it.</small></span></div>
+      <button className="guided-continue" type="submit" disabled={!afsc.trim()}>Continue <span aria-hidden="true">→</span></button>
+    </form>
+  </AppPage>;
 }
 
 function Translation({ profileReady, onNavigate }) {
@@ -471,7 +498,7 @@ export function App() {
   const reset = () => { window.history.pushState({}, "", "/"); setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); setPlanItems([]); };
 
   let page = null;
-  if (activeStep === 0) page = <StartingPoint selectedGoal={selectedGoal} profile={profile} onProfile={() => setModal("profile")} onReset={reset} onNavigate={navigate} />;
+  if (activeStep === 0) page = <StartingPoint profile={profile} onProfile={() => setModal("profile")} onSaveAfsc={afsc => setProfile(current => ({ ...current, afsc }))} onNavigate={navigate} />;
   if (activeStep === 1) page = <ExploreAirForcePaths profile={profile} onProfile={() => setModal("profile")} onNavigate={navigate} />;
   if (activeStep === 2) page = <Translation profileReady={profileReady} onNavigate={navigate} />;
   if (activeStep === 3) page = <CompetencyMap profileReady={profileReady} onNavigate={navigate} />;

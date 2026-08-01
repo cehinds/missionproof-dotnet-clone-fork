@@ -40,4 +40,13 @@ describe("MissionProof critical journeys", () => {
     await user.click(screen.getByRole("checkbox", { name: /Collect three mission-impact stories/ }));
     expect(screen.getByRole("heading", { name: "14% ready to brief" })).toBeVisible();
   });
+
+  it("saves the guided AFSC and continues to translation", async () => {
+    window.history.replaceState({}, "", "/app");
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(screen.getByRole("textbox", { name: "Primary AFSC" }), "1n0x1");
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    expect(screen.getByRole("heading", { name: "What your Air Force experience means" })).toBeVisible();
+  });
 });
