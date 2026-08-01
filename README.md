@@ -1,5 +1,9 @@
 # MissionProof
 
+## Proposal pack
+
+The detailed product redesign, .NET architecture, security, document-ingestion, testing, and six visual directions are indexed in [docs/README.md](docs/README.md).
+
 MissionProof is a .NET-hosted React application for translating Air Force experience into civilian competencies, credentials, career pathways, and transition-planning evidence.
 
 ## Architecture
@@ -69,4 +73,3 @@ MissionProof.slnx                 .NET solution
 - Keep user-interface components and styles in `src/`.
 - Introduce a separate class-library project when domain logic becomes substantial.
 - Add persistence and authentication behind ASP.NET Core rather than storing sensitive information in the browser.
-

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { calculatePlanProgress, matchAirForcePaths, searchSkillCatalog, togglePlanItem } from "./domain/missionproof.js";
 
 const stepLabels = [
   "Starting Point",
@@ -179,16 +180,7 @@ function ExploreAirForcePaths({ profile, onProfile, onNavigate }) {
   const [appliedScores, setAppliedScores] = useState(scores);
   const [family, setFamily] = useState("All paths");
   const families = ["All paths", "Operations", "Cyber & Intelligence", "Logistics", "Technical & Engineering"];
-  const results = airForcePaths
-    .filter(path => family === "All paths" || path.family === family)
-    .map(path => {
-      const gaps = Object.entries(path.scores)
-        .filter(([, required]) => required > 0)
-        .map(([area, required]) => ({ area, required, actual: Number(appliedScores[area] || 0) }))
-        .filter(item => item.actual < item.required);
-      return { ...path, gaps };
-    })
-    .sort((a, b) => a.gaps.length - b.gaps.length || a.afsc.localeCompare(b.afsc));
+  const results = matchAirForcePaths(airForcePaths, appliedScores, family);
 
   return <AppPage activeStep={1} eyebrow="Explore Air Force Paths" title="See where your MAGE scores can take you" lede="Compare your recorded ASVAB composites with example Air Force specialty thresholds, then explore paths that fit now and the closest options to research. Planning guidance only." onNavigate={onNavigate}>
     <div className="guidance-note path-guidance">Qualification rules change and can include medical, clearance, strength, citizenship, rank, and retraining-window requirements. Confirm every path with your career assistance advisor.</div>
@@ -375,12 +367,7 @@ function SearchBySkill({ planItems, onTogglePlan, onNavigate }) {
   const [activeQuery, setActiveQuery] = useState("planning");
   const [type, setType] = useState("All pathways");
   const skillPrompts = ["planning", "leadership", "cyber", "training", "logistics", "risk management"];
-  const results = skillSearchCatalog.filter(item => {
-    const words = activeQuery.toLowerCase().split(/\s+/).filter(Boolean);
-    const matchesQuery = words.length === 0 || words.some(word => `${item.title} ${item.detail} ${item.tags.join(" ")}`.toLowerCase().includes(word));
-    const matchesType = type === "All pathways" || item.type === type;
-    return matchesQuery && matchesType;
-  });
+  const results = searchSkillCatalog(skillSearchCatalog, activeQuery, type);
   const submit = event => { event?.preventDefault(); setActiveQuery(query.trim()); };
 
   return <AppPage activeStep={9} eyebrow="Search by Skill" title="Start with what you can do" lede="Search a competency once, then compare how it appears across civilian roles, federal series, and credentials. Save the strongest leads directly to your Transition Plan." onNavigate={onNavigate}>
@@ -407,7 +394,7 @@ function TransitionPlan({ profile, planItems, onTogglePlan, onProfile, onNavigat
   const [completed, setCompleted] = useState(new Set());
   const [copied, setCopied] = useState(false);
   const profileFields = Object.values(profile).filter(Boolean).length;
-  const progress = Math.round(((completed.size + Math.min(planItems.length, 2) + (profileFields >= 3 ? 1 : 0)) / 7) * 100);
+  const progress = calculatePlanProgress(completed.size, planItems.length, profileFields);
   const toggleTask = id => setCompleted(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
   const copyPlan = async () => {
     const content = ["MISSIONPROOF TRANSITION PLAN", ...planItems.map(item => `PATHWAY: ${item.title} — ${item.detail}`), ...defaultTasks.map(task => `${completed.has(task.id) ? "[x]" : "[ ]"} ${task.phase}: ${task.title}`)].join("\n");
@@ -480,7 +467,7 @@ export function App() {
     setToast("");
     window.scrollTo?.({ top: 0, behavior: "smooth" });
   };
-  const togglePlanItem = item => setPlanItems(current => current.some(saved => saved.id === item.id) ? current.filter(saved => saved.id !== item.id) : [...current, item]);
+  const toggleSavedPlanItem = item => setPlanItems(current => togglePlanItem(current, item));
   const reset = () => { window.history.pushState({}, "", "/"); setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); setPlanItems([]); };
 
   let page = null;
@@ -492,9 +479,9 @@ export function App() {
   if (activeStep === 5) page = <FederalMatch profile={profile} onNavigate={navigate} />;
   if (activeStep === 6) page = <JobsBasesMap onNavigate={navigate} />;
   if (activeStep === 7) page = <Apprenticeships profile={profile} onProfile={() => setModal("profile")} onNavigate={navigate} />;
-  if (activeStep === 8) page = <CredentialRecon profile={profile} planItems={planItems} onTogglePlan={togglePlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
-  if (activeStep === 9) page = <SearchBySkill planItems={planItems} onTogglePlan={togglePlanItem} onNavigate={navigate} />;
-  if (activeStep === 10) page = <TransitionPlan profile={profile} planItems={planItems} onTogglePlan={togglePlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
+  if (activeStep === 8) page = <CredentialRecon profile={profile} planItems={planItems} onTogglePlan={toggleSavedPlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
+  if (activeStep === 9) page = <SearchBySkill planItems={planItems} onTogglePlan={toggleSavedPlanItem} onNavigate={navigate} />;
+  if (activeStep === 10) page = <TransitionPlan profile={profile} planItems={planItems} onTogglePlan={toggleSavedPlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
 
   return <>{screen === "join" ? <JoinScreen onEnter={enter} /> : page}{modal === "consent" && <ConsentModal checked={consentChecked} onChecked={setConsentChecked} onContinue={() => setModal("goals")} />}{modal === "goals" && <GoalsModal onChoose={goal => { setSelectedGoal(goal); setModal(null); }} />}{modal === "profile" && <ProfileModal profile={profile} onClose={() => setModal(null)} onSave={next => { setProfile(next); setModal(null); }} />}{toast && <UnsupportedToast label={toast} onClose={() => setToast("")} />}</>;
 }

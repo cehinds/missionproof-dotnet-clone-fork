@@ -19,4 +19,10 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.mjs"],
+    exclude: ["tests/sites-worker.test.mjs", "node_modules/**", "dist/**"],
+    css: true,
+  },
 });
