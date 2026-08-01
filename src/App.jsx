@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const stepLabels = [
   "Starting Point",
@@ -14,7 +14,21 @@ const stepLabels = [
   "Transition Plan",
 ];
 
-const supportedSteps = new Set([0, 2, 3, 4, 5, 6, 7, 8]);
+const supportedSteps = new Set(stepLabels.map((_, index) => index));
+
+const stepPaths = [
+  "/app",
+  "/app/retrain",
+  "/app/translation",
+  "/app/competencies",
+  "/app/civilian",
+  "/app/federal",
+  "/app/jobs-bases",
+  "/app/apprenticeships",
+  "/app/credentials",
+  "/app/competency-search",
+  "/app/itp",
+];
 
 const goals = [
   { name: "Separating / TAPs", description: "Map your gaps, bridge them with credentials & education, and build your Transition Plan (ITP).", icon: "target" },
@@ -62,6 +76,28 @@ const credentialCatalog = [
   { name: "Certified Professional in Talent Development", provider: "ATD", lane: "Training / Instruction", note: "Instructional delivery, learning programs, and workforce development." },
   { name: "Certified Safety Professional", provider: "BCSP", lane: "Safety / Emergency", note: "Safety programs, hazard controls, and risk reduction." },
   { name: "Certified in Logistics, Transportation and Distribution", provider: "ASCM", lane: "Logistics / Supply", note: "Logistics planning, distribution, and supply-chain operations." },
+];
+
+const airForcePaths = [
+  { afsc: "1D7X1", title: "Cyber Defense Operations", family: "Cyber & Intelligence", scores: { M: 45, A: 41, G: 64, E: 70 }, note: "Protect networks, operate enterprise systems, and respond to cyber incidents." },
+  { afsc: "1N0X1", title: "All Source Intelligence Analyst", family: "Cyber & Intelligence", scores: { M: 0, A: 0, G: 62, E: 0 }, note: "Synthesize intelligence, brief leaders, and support operational decisions." },
+  { afsc: "1C5X1", title: "Command and Control Battle Management", family: "Operations", scores: { M: 0, A: 0, G: 55, E: 0 }, note: "Coordinate command-and-control systems and build a shared operational picture." },
+  { afsc: "2G0X1", title: "Logistics Plans", family: "Logistics", scores: { M: 0, A: 56, G: 0, E: 0 }, note: "Plan force movement, readiness, deployment, and logistics support." },
+  { afsc: "2T2X1", title: "Air Transportation", family: "Logistics", scores: { M: 47, A: 0, G: 0, E: 0 }, note: "Move passengers and cargo safely through military air terminals." },
+  { afsc: "3E5X1", title: "Engineering", family: "Technical & Engineering", scores: { M: 0, A: 0, G: 49, E: 0 }, note: "Survey, draft, inspect, and support installation engineering projects." },
+];
+
+const skillSearchCatalog = [
+  { id: "civilian-program-analyst", type: "Civilian role", title: "Program Analyst", detail: "Turn plans, milestones, risks, and performance evidence into program decisions.", tags: ["planning", "analysis", "leadership", "program management"] },
+  { id: "federal-0343", type: "Federal series", title: "0343 — Management & Program Analysis", detail: "A research lead for program evaluation, process improvement, and advisory work.", tags: ["planning", "analysis", "process improvement", "leadership"] },
+  { id: "credential-pmp", type: "Credential", title: "Project Management Professional (PMP)", detail: "Validates project leadership, schedules, risks, and stakeholder coordination.", tags: ["planning", "leadership", "project management"] },
+  { id: "civilian-cyber", type: "Civilian role", title: "Cybersecurity Analyst", detail: "Apply systems knowledge, incident response, and risk-control evidence.", tags: ["cyber", "security", "risk management", "technical"] },
+  { id: "federal-2210", type: "Federal series", title: "2210 — Information Technology Management", detail: "Federal pathway spanning customer support, systems, policy, and cybersecurity.", tags: ["cyber", "security", "technical", "systems"] },
+  { id: "credential-security", type: "Credential", title: "CompTIA Security+", detail: "Baseline cybersecurity operations, threats, architecture, and risk controls.", tags: ["cyber", "security", "technical"] },
+  { id: "civilian-training", type: "Civilian role", title: "Training & Development Specialist", detail: "Translate qualification, briefing, coaching, and curriculum experience.", tags: ["training", "instruction", "leadership", "communication"] },
+  { id: "federal-1712", type: "Federal series", title: "1712 — Training Instruction", detail: "Research lead for formal instruction, curriculum, and workforce development.", tags: ["training", "instruction", "communication"] },
+  { id: "civilian-logistics", type: "Civilian role", title: "Logistics Coordinator", detail: "Connect readiness, inventory accountability, movement, and mission support.", tags: ["logistics", "operations", "planning", "supply"] },
+  { id: "credential-cltd", type: "Credential", title: "Certified in Logistics, Transportation and Distribution", detail: "Validates logistics planning, distribution, and supply-chain operations.", tags: ["logistics", "supply", "operations"] },
 ];
 
 const mapDatasets = [
@@ -136,6 +172,41 @@ function StartingPoint({ selectedGoal, profile, onProfile, onReset, onNavigate }
 
 function Translation({ profileReady, onNavigate }) {
   return <AppPage activeStep={2} eyebrow="My Competency Translation" title="What your Air Force experience means" lede="Your service translated into civilian, federal, and project-management competency language — what transfers, and your honest gaps. Planning guidance only." onNavigate={onNavigate}>{profileReady ? <div className="translation-grid"><InfoCard label="Service evidence" title="Operational planning" copy="Plans, coordinates, and executes time-sensitive work under defined standards." /><InfoCard label="Civilian language" title="Cross-functional delivery" copy="Turns priorities into schedules, aligns stakeholders, and tracks work to completion." /><InfoCard label="Honest gap" title="Commercial context" copy="Add examples that show budgets, customers, and business outcomes." /></div> : <ProfileWarning onNavigate={onNavigate} />}<PageActions leftLabel="Profile" leftStep={0} rightLabel="Next: Competency Profile →" rightStep={3} onNavigate={onNavigate} /></AppPage>;
+}
+
+function ExploreAirForcePaths({ profile, onProfile, onNavigate }) {
+  const [scores, setScores] = useState({ M: 65, A: 72, G: 74, E: 68 });
+  const [appliedScores, setAppliedScores] = useState(scores);
+  const [family, setFamily] = useState("All paths");
+  const families = ["All paths", "Operations", "Cyber & Intelligence", "Logistics", "Technical & Engineering"];
+  const results = airForcePaths
+    .filter(path => family === "All paths" || path.family === family)
+    .map(path => {
+      const gaps = Object.entries(path.scores)
+        .filter(([, required]) => required > 0)
+        .map(([area, required]) => ({ area, required, actual: Number(appliedScores[area] || 0) }))
+        .filter(item => item.actual < item.required);
+      return { ...path, gaps };
+    })
+    .sort((a, b) => a.gaps.length - b.gaps.length || a.afsc.localeCompare(b.afsc));
+
+  return <AppPage activeStep={1} eyebrow="Explore Air Force Paths" title="See where your MAGE scores can take you" lede="Compare your recorded ASVAB composites with example Air Force specialty thresholds, then explore paths that fit now and the closest options to research. Planning guidance only." onNavigate={onNavigate}>
+    <div className="guidance-note path-guidance">Qualification rules change and can include medical, clearance, strength, citizenship, rank, and retraining-window requirements. Confirm every path with your career assistance advisor.</div>
+    <section className="path-workspace">
+      <div className="score-panel">
+        <div className="section-title-row"><div><p className="eyebrow">Your qualification snapshot</p><h2>Enter MAGE scores</h2></div><span>{profile.afsc || "AFSC not set"}</span></div>
+        <p>Use your latest official scores. MissionProof keeps these values in this prototype only while the page is open.</p>
+        <div className="score-grid">{Object.entries(scores).map(([area, value]) => <label key={area}><span><b>{area}</b>{({ M: "Mechanical", A: "Administrative", G: "General", E: "Electrical" })[area]}</span><input aria-label={`${area} composite score`} type="number" min="1" max="99" value={value} onChange={event => setScores(current => ({ ...current, [area]: Math.max(1, Math.min(99, Number(event.target.value))) }))} /></label>)}</div>
+        <div className="score-actions"><button type="button" onClick={() => setAppliedScores(scores)}>Run path match</button><button type="button" onClick={onProfile}>{profile.afsc ? "Update service profile" : "Add current AFSC"}</button></div>
+      </div>
+      <aside className="path-summary"><p className="eyebrow">Current view</p><strong>{results.filter(item => item.gaps.length === 0).length}</strong><span>score-aligned paths</span><dl><div><dt>Strongest composite</dt><dd>{Object.entries(appliedScores).sort((a, b) => b[1] - a[1])[0].join(" · ")}</dd></div><div><dt>Career family</dt><dd>{family}</dd></div></dl></aside>
+    </section>
+    <section className="path-results" aria-live="polite">
+      <div className="path-filter-row"><div><p className="eyebrow">Path explorer</p><h2>Your score alignment</h2></div><label>Career family<select value={family} onChange={event => setFamily(event.target.value)}>{families.map(item => <option key={item}>{item}</option>)}</select></label></div>
+      <div className="path-card-grid">{results.map(path => <article className={`path-card ${path.gaps.length ? "near" : "eligible"}`} key={path.afsc}><div><span className="fit-pill">{path.gaps.length ? `${path.gaps.length} score gap` : "Score aligned"}</span><b>{path.family}</b></div><p className="path-code">{path.afsc}</p><h3>{path.title}</h3><p>{path.note}</p><div className="requirements">{Object.entries(path.scores).filter(([, value]) => value > 0).map(([area, value]) => <span className={Number(appliedScores[area]) >= value ? "met" : "gap"} key={area}>{area} {value}</span>)}</div>{path.gaps.length ? <small>Closest gap: {path.gaps[0].area} needs {path.gaps[0].required}; current {path.gaps[0].actual}.</small> : <small>Your entered composites meet the displayed score threshold.</small>}</article>)}</div>
+    </section>
+    <PageActions leftLabel="← Starting Point" leftStep={0} rightLabel="Next: My Translation →" rightStep={2} onNavigate={onNavigate} />
+  </AppPage>;
 }
 
 function CompetencyMap({ profileReady, onNavigate }) {
@@ -237,21 +308,21 @@ function Apprenticeships({ profile, onProfile, onNavigate }) {
   return <AppPage activeStep={7} eyebrow="Registered Apprenticeships" title="DOL apprenticeship pathways for your AFSC" lede="USMAP excludes the Air Force — this maps your AFSC directly to DOL Registered Apprenticeship standards, so your military experience can count toward a civilian apprenticeship." onNavigate={onNavigate}><section className="apprenticeship-panel">{profile.afsc ? <div className="apprenticeship-ready"><p className="eyebrow">AFSC recorded</p><h2>{profile.afsc}</h2><p>Your AFSC is ready for a Department of Labor standards lookup. Live registry matching is not included in this frontend prototype.</p><button type="button" onClick={onProfile}>Update AFSC</button></div> : <div className="apprenticeship-empty"><strong>Set your AFSC in your profile first.</strong><button type="button" onClick={onProfile}>Open profile</button></div>}</section><PageActions leftLabel="← Jobs & Bases Map" leftStep={6} rightLabel="Next: Credential Recon →" rightStep={8} onNavigate={onNavigate} /></AppPage>;
 }
 
-function CredentialRecon({ profile, onProfile, onNavigate }) {
+function CredentialRecon({ profile, planItems, onTogglePlan, onProfile, onNavigate }) {
   const [lane, setLane] = useState("");
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
-  const [saved, setSaved] = useState([]);
   const filtered = credentialCatalog.filter(item => {
     const needle = query.trim().toLowerCase();
     return (!lane || item.lane === lane) && (!needle || `${item.name} ${item.provider} ${item.lane}`.toLowerCase().includes(needle));
   });
   const chooseLane = nextLane => { setLane(nextLane === lane ? "" : nextLane); setSearched(true); };
-  const toggleSaved = name => setSaved(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name]);
+  const credentialPlanItem = item => ({ id: `credential-${item.name}`, type: "Credential", title: item.name, detail: item.note });
+  const isSaved = item => planItems.some(savedItem => savedItem.id === `credential-${item.name}`);
 
   return <AppPage activeStep={8} eyebrow="Credential Recon" title="Credentials matched to you" lede={<>MissionProof matches credentials to your <strong>actual competencies</strong> (CFETP + PME + duties) and lists what AF COOL identifies for your AFSC. Credentials are research leads until you verify status and applied proof.</>} onNavigate={onNavigate}>
     <section className="credential-overview">
-      <div className="plan-count"><strong>{saved.length}</strong><span>in your plan</span></div>
+      <div className="plan-count"><strong>{planItems.length}</strong><span>in your plan</span></div>
       <p>Credential-provider and AF COOL records are discovery signals. They do not prove competency, determine official eligibility, or close protected gaps by themselves.</p>
       <div className="credential-profile-note">{profile.afsc ? <>Using AFSC <strong>{profile.afsc}</strong>. Credential matches remain research leads until you verify current AF COOL eligibility and provider requirements.</> : <>Set your AFSC and competencies in your profile first — then MissionProof matches credentials to what you&apos;ve actually developed. <button type="button" onClick={onProfile}>Open profile</button></>}</div>
     </section>
@@ -271,7 +342,7 @@ function CredentialRecon({ profile, onProfile, onNavigate }) {
       <p className="eyebrow">Matched to your competencies</p>
       <h2>{profile.afsc ? "2 credentials match your experience" : "0 credentials match your experience"}</h2>
       <p>Ranked by strength of match against your competencies and PME — strongest first. Green means you meet the degree requirement; “Needs degree” marks one you haven&apos;t recorded.</p>
-      {profile.afsc ? <div className="credential-cards">{credentialCatalog.slice(0,2).map(item => <CredentialCard item={item} saved={saved.includes(item.name)} onToggle={() => toggleSaved(item.name)} key={item.name} />)}</div> : <p className="credential-empty">Add competencies to your profile to see matched credentials.</p>}
+      {profile.afsc ? <div className="credential-cards">{credentialCatalog.slice(0,2).map(item => <CredentialCard item={item} saved={isSaved(item)} onToggle={() => onTogglePlan(credentialPlanItem(item))} key={item.name} />)}</div> : <p className="credential-empty">Add competencies to your profile to see matched credentials.</p>}
     </section>
 
     <section className="credential-section">
@@ -289,7 +360,7 @@ function CredentialRecon({ profile, onProfile, onNavigate }) {
         <label htmlFor="recon-cred-search">Search credentials<input id="recon-cred-search" value={query} onChange={event => { setQuery(event.target.value); setSearched(false); }} placeholder="Security+, FAC-C, CDFM, Green Belt" /></label>
         <button type="submit">Search</button>
       </form>
-      {searched && <div className="credential-search-results" aria-live="polite"><div className="credential-search-head"><strong>{filtered.length} credential{filtered.length === 1 ? "" : "s"} found</strong>{(lane || query) && <button type="button" onClick={() => { setLane(""); setQuery(""); setSearched(false); }}>Clear search</button>}</div>{filtered.length ? <div className="credential-cards">{filtered.map(item => <CredentialCard item={item} saved={saved.includes(item.name)} onToggle={() => toggleSaved(item.name)} key={item.name} />)}</div> : <p className="credential-empty">No credentials match that search. Try a lane or a broader keyword.</p>}</div>}
+      {searched && <div className="credential-search-results" aria-live="polite"><div className="credential-search-head"><strong>{filtered.length} credential{filtered.length === 1 ? "" : "s"} found</strong>{(lane || query) && <button type="button" onClick={() => { setLane(""); setQuery(""); setSearched(false); }}>Clear search</button>}</div>{filtered.length ? <div className="credential-cards">{filtered.map(item => <CredentialCard item={item} saved={isSaved(item)} onToggle={() => onTogglePlan(credentialPlanItem(item))} key={item.name} />)}</div> : <p className="credential-empty">No credentials match that search. Try a lane or a broader keyword.</p>}</div>}
     </details>
     <div className="page-actions credential-page-actions"><button type="button" className="primary-action" onClick={() => onNavigate(9)}>Next: Search by Skill →</button><button type="button" className="secondary-action" onClick={() => onNavigate(5)}>Federal Match</button></div>
   </AppPage>;
@@ -297,6 +368,63 @@ function CredentialRecon({ profile, onProfile, onNavigate }) {
 
 function CredentialCard({ item, saved, onToggle }) {
   return <article className="credential-card"><div><span>{item.lane}</span><button type="button" className={saved ? "saved" : ""} onClick={onToggle}>{saved ? "In plan" : "Add to plan"}</button></div><h3>{item.name}</h3><p>{item.provider}</p><p>{item.note}</p></article>;
+}
+
+function SearchBySkill({ planItems, onTogglePlan, onNavigate }) {
+  const [query, setQuery] = useState("planning");
+  const [activeQuery, setActiveQuery] = useState("planning");
+  const [type, setType] = useState("All pathways");
+  const skillPrompts = ["planning", "leadership", "cyber", "training", "logistics", "risk management"];
+  const results = skillSearchCatalog.filter(item => {
+    const words = activeQuery.toLowerCase().split(/\s+/).filter(Boolean);
+    const matchesQuery = words.length === 0 || words.some(word => `${item.title} ${item.detail} ${item.tags.join(" ")}`.toLowerCase().includes(word));
+    const matchesType = type === "All pathways" || item.type === type;
+    return matchesQuery && matchesType;
+  });
+  const submit = event => { event?.preventDefault(); setActiveQuery(query.trim()); };
+
+  return <AppPage activeStep={9} eyebrow="Search by Skill" title="Start with what you can do" lede="Search a competency once, then compare how it appears across civilian roles, federal series, and credentials. Save the strongest leads directly to your Transition Plan." onNavigate={onNavigate}>
+    <section className="skill-search-hero">
+      <form onSubmit={submit}><label htmlFor="skill-search">Skill, capability, or work you enjoy</label><div><input id="skill-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Try planning, cyber, training, logistics, leadership…" /><button type="submit">Search pathways</button></div></form>
+      <div className="skill-prompt-row"><span>Popular starting points</span>{skillPrompts.map(skill => <button type="button" className={activeQuery === skill ? "active" : ""} onClick={() => { setQuery(skill); setActiveQuery(skill); }} key={skill}>{skill}</button>)}</div>
+    </section>
+    <section className="skill-results" aria-live="polite">
+      <div className="skill-results-head"><div><p className="eyebrow">Evidence pathways</p><h2>{results.length} matches for “{activeQuery || "all skills"}”</h2></div><label>Show<select value={type} onChange={event => setType(event.target.value)}>{["All pathways", "Civilian role", "Federal series", "Credential"].map(item => <option key={item}>{item}</option>)}</select></label></div>
+      {results.length ? <div className="skill-result-list">{results.map(item => { const saved = planItems.some(savedItem => savedItem.id === item.id); return <article className="skill-result-card" key={item.id}><div className="skill-result-type"><span>{item.type}</span><i>{item.tags.slice(0, 2).join(" · ")}</i></div><div><h3>{item.title}</h3><p>{item.detail}</p></div><button type="button" className={saved ? "saved" : ""} onClick={() => onTogglePlan(item)}>{saved ? "Added to plan" : "+ Add to plan"}</button></article>; })}</div> : <div className="empty-note">No exact pathway match yet. Try a broader skill such as planning, leadership, cyber, training, or logistics.</div>}
+    </section>
+    <div className="plan-rail"><div><span>{planItems.length}</span><p><strong>pathway{planItems.length === 1 ? "" : "s"} in your plan</strong><small>Keep collecting leads, then turn them into dated actions.</small></p></div><button type="button" onClick={() => onNavigate(10)}>Open Transition Plan →</button></div>
+    <PageActions leftLabel="← Credential Recon" leftStep={8} rightLabel="Next: Transition Plan →" rightStep={10} onNavigate={onNavigate} />
+  </AppPage>;
+}
+
+function TransitionPlan({ profile, planItems, onTogglePlan, onProfile, onNavigate }) {
+  const defaultTasks = [
+    { id: "task-evidence", phase: "Now · 0–30 days", title: "Collect three mission-impact stories", detail: "Write the situation, your action, and a measurable outcome without sensitive details." },
+    { id: "task-target", phase: "Next · 30–90 days", title: "Validate one target pathway", detail: "Compare your evidence with live role requirements and record the gaps." },
+    { id: "task-credential", phase: "Before separation", title: "Confirm funding and credential timing", detail: "Verify current AF COOL rules with your education office before committing funds." },
+    { id: "task-network", phase: "Launch", title: "Run a warm-introduction sprint", detail: "Schedule five conversations with people doing the work you want next." },
+  ];
+  const [completed, setCompleted] = useState(new Set());
+  const [copied, setCopied] = useState(false);
+  const profileFields = Object.values(profile).filter(Boolean).length;
+  const progress = Math.round(((completed.size + Math.min(planItems.length, 2) + (profileFields >= 3 ? 1 : 0)) / 7) * 100);
+  const toggleTask = id => setCompleted(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const copyPlan = async () => {
+    const content = ["MISSIONPROOF TRANSITION PLAN", ...planItems.map(item => `PATHWAY: ${item.title} — ${item.detail}`), ...defaultTasks.map(task => `${completed.has(task.id) ? "[x]" : "[ ]"} ${task.phase}: ${task.title}`)].join("\n");
+    try { await navigator.clipboard.writeText(content); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); }
+  };
+
+  return <AppPage activeStep={10} eyebrow="Individual Transition Plan" title="Turn your evidence into a transition plan" lede="Bring your saved pathways, honest gaps, and next actions into one working plan. MissionProof helps you organize the work; you own the decisions and official verification." onNavigate={onNavigate}>
+    <section className="itp-overview">
+      <div><p className="eyebrow">Plan readiness</p><h2>{progress}% ready to brief</h2><p>{planItems.length ? "Your evidence leads are connected to an action plan." : "Choose at least one target pathway so each action has a destination."}</p><div className="progress"><i style={{ width: `${Math.max(progress, 4)}%` }} /></div></div>
+      <div className="itp-metrics"><div><strong>{planItems.length}</strong><span>Saved pathways</span></div><div><strong>{completed.size}/4</strong><span>Actions complete</span></div><div><strong>{profileFields}/5</strong><span>Profile facts</span></div></div>
+      <div className="itp-actions"><button type="button" className="primary-action" onClick={copyPlan}>{copied ? "Copied" : "Copy plan"}</button><button type="button" className="secondary-action" onClick={() => window.print()}>Print / save PDF</button></div>
+    </section>
+    <section className="itp-section"><div className="section-title-row"><div><p className="eyebrow">Target pathways</p><h2>What you are building toward</h2></div><button type="button" onClick={() => onNavigate(9)}>+ Search by skill</button></div>{planItems.length ? <div className="itp-target-grid">{planItems.map(item => <article key={item.id}><span>{item.type}</span><h3>{item.title}</h3><p>{item.detail}</p><button type="button" onClick={() => onTogglePlan(item)}>Remove</button></article>)}</div> : <div className="itp-empty"><strong>No pathways saved yet.</strong><p>Search by skill or add a credential, then bring the strongest research lead here.</p><button type="button" onClick={() => onNavigate(9)}>Find a target pathway</button></div>}</section>
+    <section className="itp-section"><div className="section-title-row"><div><p className="eyebrow">Action timeline</p><h2>Your next four moves</h2></div><span>{completed.size} complete</span></div><div className="itp-timeline">{defaultTasks.map((task, index) => <label className={completed.has(task.id) ? "complete" : ""} key={task.id}><input type="checkbox" checked={completed.has(task.id)} onChange={() => toggleTask(task.id)} /><i>{String(index + 1).padStart(2, "0")}</i><span><b>{task.phase}</b><strong>{task.title}</strong><small>{task.detail}</small></span></label>)}</div></section>
+    <section className="itp-profile-check"><div><p className="eyebrow">Evidence foundation</p><h2>{profileFields >= 3 ? "Core service facts recorded" : "Your profile still needs evidence anchors"}</h2><p>Current profile: <strong>{profile.afsc || "AFSC missing"}</strong> · {profile.rank || "rank missing"} · {profile.skill || "skill level missing"} · {profile.education || "education missing"}</p></div><button type="button" onClick={onProfile}>Update profile</button></section>
+    <PageActions leftLabel="← Search by Skill" leftStep={9} rightLabel="Back to Starting Point" rightStep={0} onNavigate={onNavigate} />
+  </AppPage>;
 }
 
 function InfoCard({ label, title, copy }) { return <article className="info-card"><p className="eyebrow">{label}</p><h3>{title}</h3><p>{copy}</p></article>; }
@@ -322,28 +450,51 @@ function ProfileModal({ profile, onSave, onClose }) {
 function UnsupportedToast({ label, onClose }) { return <div className="toast" role="status"><span><strong>{label}</strong> is outside the current prototype.</span><button type="button" onClick={onClose}>Close</button></div>; }
 
 export function App() {
-  const [screen, setScreen] = useState("join");
-  const [activeStep, setActiveStep] = useState(0);
+  const initialStep = Math.max(0, stepPaths.indexOf(window.location.pathname));
+  const [screen, setScreen] = useState(() => window.location.pathname.startsWith("/app") ? "app" : "join");
+  const [activeStep, setActiveStep] = useState(initialStep);
   const [consentChecked, setConsentChecked] = useState(false);
   const [modal, setModal] = useState(null);
   const [selectedGoal, setSelectedGoal] = useState("");
   const [profile, setProfile] = useState({ afsc: "", rank: "", skill: "", years: "", education: "" });
+  const [planItems, setPlanItems] = useState([]);
   const [toast, setToast] = useState("");
   const profileReady = useMemo(() => Boolean(profile.afsc && profile.rank && profile.skill), [profile]);
 
-  const enter = () => { setScreen("app"); setModal("consent"); };
-  const navigate = step => { if (!supportedSteps.has(step)) { setToast(stepLabels[step]); return; } setActiveStep(step); setToast(""); window.scrollTo?.({ top: 0, behavior: "smooth" }); };
-  const reset = () => { setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); };
+  useEffect(() => {
+    const syncRoute = () => {
+      const nextStep = stepPaths.indexOf(window.location.pathname);
+      setScreen(window.location.pathname.startsWith("/app") ? "app" : "join");
+      if (nextStep >= 0) setActiveStep(nextStep);
+    };
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
+
+  const enter = () => { window.history.pushState({}, "", stepPaths[0]); setScreen("app"); setActiveStep(0); setModal("consent"); };
+  const navigate = step => {
+    if (!supportedSteps.has(step)) { setToast(stepLabels[step]); return; }
+    window.history.pushState({}, "", stepPaths[step]);
+    setScreen("app");
+    setActiveStep(step);
+    setToast("");
+    window.scrollTo?.({ top: 0, behavior: "smooth" });
+  };
+  const togglePlanItem = item => setPlanItems(current => current.some(saved => saved.id === item.id) ? current.filter(saved => saved.id !== item.id) : [...current, item]);
+  const reset = () => { window.history.pushState({}, "", "/"); setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); setPlanItems([]); };
 
   let page = null;
   if (activeStep === 0) page = <StartingPoint selectedGoal={selectedGoal} profile={profile} onProfile={() => setModal("profile")} onReset={reset} onNavigate={navigate} />;
+  if (activeStep === 1) page = <ExploreAirForcePaths profile={profile} onProfile={() => setModal("profile")} onNavigate={navigate} />;
   if (activeStep === 2) page = <Translation profileReady={profileReady} onNavigate={navigate} />;
   if (activeStep === 3) page = <CompetencyMap profileReady={profileReady} onNavigate={navigate} />;
   if (activeStep === 4) page = <CivilianMatch profile={profile} onNavigate={navigate} />;
   if (activeStep === 5) page = <FederalMatch profile={profile} onNavigate={navigate} />;
   if (activeStep === 6) page = <JobsBasesMap onNavigate={navigate} />;
   if (activeStep === 7) page = <Apprenticeships profile={profile} onProfile={() => setModal("profile")} onNavigate={navigate} />;
-  if (activeStep === 8) page = <CredentialRecon profile={profile} onProfile={() => setModal("profile")} onNavigate={navigate} />;
+  if (activeStep === 8) page = <CredentialRecon profile={profile} planItems={planItems} onTogglePlan={togglePlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
+  if (activeStep === 9) page = <SearchBySkill planItems={planItems} onTogglePlan={togglePlanItem} onNavigate={navigate} />;
+  if (activeStep === 10) page = <TransitionPlan profile={profile} planItems={planItems} onTogglePlan={togglePlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
 
   return <>{screen === "join" ? <JoinScreen onEnter={enter} /> : page}{modal === "consent" && <ConsentModal checked={consentChecked} onChecked={setConsentChecked} onContinue={() => setModal("goals")} />}{modal === "goals" && <GoalsModal onChoose={goal => { setSelectedGoal(goal); setModal(null); }} />}{modal === "profile" && <ProfileModal profile={profile} onClose={() => setModal(null)} onSave={next => { setProfile(next); setModal(null); }} />}{toast && <UnsupportedToast label={toast} onClose={() => setToast("")} />}</>;
 }
