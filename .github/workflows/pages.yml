@@ -1,0 +1,62 @@
+name: Deploy prototype to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow the workflow to publish a Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The prototype gates its own build; a red suite should not reach the site.
+      - run: npm test
+      - run: npm run test:sites
+
+      - uses: actions/configure-pages@v5
+        id: pages
+        with:
+          # Creates the Pages site on first run so no manual setup is needed.
+          enablement: true
+
+      # A project site is served from /<repo>/, so the bundle needs that base.
+      - run: npm run build
+        env:
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}/
+
+      # Stop Pages stripping files and folders that begin with an underscore.
+      - run: touch dist/client/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/client
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

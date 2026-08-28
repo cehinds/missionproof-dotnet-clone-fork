@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import {
   airForcePaths, apprenticeshipTracks, civilianFields, civilianResults, compositeNames,
   credentialCatalog, credentialLanes, federalLenses, federalSeries, mapDatasets, mapRegions,
-  mapStateRows, pathFamilies, populatedState,
+  mapStateRows, pathFamilies, populatedState, asset,
 } from "../data.js";
 import { matchAirForcePaths } from "../domain/missionproof.js";
 import { ChipGroup, Disclosure, EmptyState, Mark, NextStep, Note, Pill, SaveButton, SectionHead } from "../ui.jsx";
@@ -354,7 +354,7 @@ export function MapSection({ onGo }) {
         <div className="map-workspace">
           <div className="panel map-canvas">
             <button type="button" className="map-image" onClick={() => setSelectedState("Texas")} aria-label="Open Texas job and base details">
-              <img src="/assets/heatmap-us.png" alt="United States job demand heatmap; Texas is the strongest collected-job market" />
+              <img src={asset("/assets/heatmap-us.png")} alt="United States job demand heatmap; Texas is the strongest collected-job market" />
             </button>
             <div className="map-legend">
               <span>fewer jobs</span><i /><span>more</span>
