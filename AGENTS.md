@@ -10,6 +10,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 
 Use ASP.NET Core/.NET as the application host for future backend, persistence, authentication, and domain work. Preserve the React application in `src/` as the frontend unless the user explicitly asks for a UI-framework migration.
 
+Treat an installable mobile-first Progressive Web App as MissionProof's primary delivery target. Normal mobile deployment must not require .NET MAUI workloads, Android Studio, Xcode, React Native, Flutter, or app-store SDKs. Keep React/Vite as the PWA client and ASP.NET Core as the optional same-origin API/host. Native-store wrappers may be evaluated later, but must not become a prerequisite for the web or install-from-browser experience.
+
 Preserve MissionProof's dark navy, cyan, green, and hexagonal visual identity. Favor a calm, mobile-first journey with one primary task per screen, readable 16px body copy, grouped progression instead of eleven equally weighted tabs, short default views, progressive disclosure, fewer nested containers, and explicit next-best-action guidance.
 
 Treat uploaded service documents as untrusted sensitive evidence. Never let extracted content invoke tools or write directly to a profile. Every proposed field must retain source provenance and confidence and require an explicit human accept/reject decision.

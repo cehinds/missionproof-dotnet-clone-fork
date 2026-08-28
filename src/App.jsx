@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { calculatePlanProgress, matchAirForcePaths, searchSkillCatalog, togglePlanItem } from "./domain/missionproof.js";
+import { MissionProofJourney } from "./app/MissionProofJourney.jsx";
+import { isJourneyPath } from "./app/routeRegistry.js";
+import { journeyPaths } from "./domain/walkingPath.js";
+import { createDefaultMissionProofClient } from "./lib/api/MissionProofClient.js";
+import { assetUrl, fromBrowserPath, toBrowserPath } from "./app/basePath.js";
 
 const stepLabels = [
   "Starting Point",
@@ -40,15 +45,15 @@ const goals = [
 ];
 
 const iconSources = {
-  help: "/assets/icons/a85ccba6ec2fcfe6.svg?v=2",
-  bell: "/assets/icons/114ee41050bd9c98.svg?v=2",
-  badge: "/assets/icons/27f5d4948d20a870.svg?v=2",
-  "user-large": "/assets/icons/33a79e8f64b0fbe5.svg?v=2",
-  target: "/assets/icons/23bdc450e0145582.svg?v=2",
-  leaf: "/assets/icons/38c27f8adeb6824a.svg?v=2",
-  retrain: "/assets/icons/0910033787a51fe8.svg?v=2",
-  federal: "/assets/icons/75057a8b1c9bd184.svg?v=2",
-  credentials: "/assets/icons/db8b0c71463c881c.svg?v=2",
+  help: assetUrl("assets/icons/a85ccba6ec2fcfe6.svg?v=2"),
+  bell: assetUrl("assets/icons/114ee41050bd9c98.svg?v=2"),
+  badge: assetUrl("assets/icons/27f5d4948d20a870.svg?v=2"),
+  "user-large": assetUrl("assets/icons/33a79e8f64b0fbe5.svg?v=2"),
+  target: assetUrl("assets/icons/23bdc450e0145582.svg?v=2"),
+  leaf: assetUrl("assets/icons/38c27f8adeb6824a.svg?v=2"),
+  retrain: assetUrl("assets/icons/0910033787a51fe8.svg?v=2"),
+  federal: assetUrl("assets/icons/75057a8b1c9bd184.svg?v=2"),
+  credentials: assetUrl("assets/icons/db8b0c71463c881c.svg?v=2"),
 };
 
 const civilianFields = [
@@ -276,7 +281,7 @@ function HeatmapExplorer() {
         <div className="map-workspace">
           <div className="map-canvas">
             <button type="button" className="map-image-button" onClick={() => setSelectedState("Texas")} aria-label="Open Texas job and base details">
-              <img src="/assets/heatmap-us.png" alt="United States job demand heatmap with Texas as the strongest collected-job market" />
+              <img src={assetUrl("assets/heatmap-us.png")} alt="United States job demand heatmap with Texas as the strongest collected-job market" />
             </button>
             <div className="jobs-legend"><span>fewer jobs</span><i /><span>more</span></div>
             <div className="service-legend"><span>Filter bases by service:</span>{["AF", "Space Force", "Army", "Navy", "USMC", "Joint"].map(service => <button className={showBases ? "on" : ""} type="button" key={service} onClick={() => setShowBases(true)}><i />{service}</button>)}</div>
@@ -436,9 +441,10 @@ function ProfileModal({ profile, onSave, onClose }) {
 
 function UnsupportedToast({ label, onClose }) { return <div className="toast" role="status"><span><strong>{label}</strong> is outside the current prototype.</span><button type="button" onClick={onClose}>Close</button></div>; }
 
-export function App() {
-  const initialStep = Math.max(0, stepPaths.indexOf(window.location.pathname));
-  const [screen, setScreen] = useState(() => window.location.pathname.startsWith("/app") ? "app" : "join");
+function LegacyApp({ onStartJourney }) {
+  const initialPath = fromBrowserPath(window.location.pathname);
+  const initialStep = Math.max(0, stepPaths.indexOf(initialPath));
+  const [screen, setScreen] = useState(() => initialPath.startsWith("/app") ? "app" : "join");
   const [activeStep, setActiveStep] = useState(initialStep);
   const [consentChecked, setConsentChecked] = useState(false);
   const [modal, setModal] = useState(null);
@@ -450,25 +456,29 @@ export function App() {
 
   useEffect(() => {
     const syncRoute = () => {
-      const nextStep = stepPaths.indexOf(window.location.pathname);
-      setScreen(window.location.pathname.startsWith("/app") ? "app" : "join");
+      const nextPath = fromBrowserPath(window.location.pathname);
+      const nextStep = stepPaths.indexOf(nextPath);
+      setScreen(nextPath.startsWith("/app") ? "app" : "join");
       if (nextStep >= 0) setActiveStep(nextStep);
     };
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
 
-  const enter = () => { window.history.pushState({}, "", stepPaths[0]); setScreen("app"); setActiveStep(0); setModal("consent"); };
+  const enter = () => {
+    if (onStartJourney) { onStartJourney(); return; }
+    window.history.pushState({}, "", toBrowserPath(stepPaths[0])); setScreen("app"); setActiveStep(0); setModal("consent");
+  };
   const navigate = step => {
     if (!supportedSteps.has(step)) { setToast(stepLabels[step]); return; }
-    window.history.pushState({}, "", stepPaths[step]);
+    window.history.pushState({}, "", toBrowserPath(stepPaths[step]));
     setScreen("app");
     setActiveStep(step);
     setToast("");
     window.scrollTo?.({ top: 0, behavior: "smooth" });
   };
   const toggleSavedPlanItem = item => setPlanItems(current => togglePlanItem(current, item));
-  const reset = () => { window.history.pushState({}, "", "/"); setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); setPlanItems([]); };
+  const reset = () => { window.history.pushState({}, "", toBrowserPath("/")); setScreen("join"); setActiveStep(0); setModal(null); setConsentChecked(false); setSelectedGoal(""); setProfile({ afsc: "", rank: "", skill: "", years: "", education: "" }); setPlanItems([]); };
 
   let page = null;
   if (activeStep === 0) page = <StartingPoint selectedGoal={selectedGoal} profile={profile} onProfile={() => setModal("profile")} onReset={reset} onNavigate={navigate} />;
@@ -484,4 +494,26 @@ export function App() {
   if (activeStep === 10) page = <TransitionPlan profile={profile} planItems={planItems} onTogglePlan={toggleSavedPlanItem} onProfile={() => setModal("profile")} onNavigate={navigate} />;
 
   return <>{screen === "join" ? <JoinScreen onEnter={enter} /> : page}{modal === "consent" && <ConsentModal checked={consentChecked} onChecked={setConsentChecked} onContinue={() => setModal("goals")} />}{modal === "goals" && <GoalsModal onChoose={goal => { setSelectedGoal(goal); setModal(null); }} />}{modal === "profile" && <ProfileModal profile={profile} onClose={() => setModal(null)} onSave={next => { setProfile(next); setModal(null); }} />}{toast && <UnsupportedToast label={toast} onClose={() => setToast("")} />}</>;
+}
+
+export function App({ client }) {
+  const clientRef = useRef(client);
+  if (!clientRef.current) clientRef.current = createDefaultMissionProofClient();
+  const [path, setPath] = useState(() => fromBrowserPath(window.location.pathname));
+
+  useEffect(() => {
+    const syncPath = () => setPath(fromBrowserPath(window.location.pathname));
+    window.addEventListener("popstate", syncPath);
+    return () => window.removeEventListener("popstate", syncPath);
+  }, []);
+
+  const navigate = useCallback((nextPath, { replace = false } = {}) => {
+    window.history[replace ? "replaceState" : "pushState"]({}, "", toBrowserPath(nextPath));
+    setPath(nextPath);
+    window.scrollTo?.({ top: 0, behavior: "smooth" });
+  }, []);
+
+  if (path === "/") return <LegacyApp onStartJourney={() => navigate(journeyPaths.consent)} />;
+  if (isJourneyPath(path)) return <MissionProofJourney client={clientRef.current} path={path} onNavigate={navigate} />;
+  return <LegacyApp />;
 }

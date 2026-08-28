@@ -1,0 +1,34 @@
+{
+  "id": "./",
+  "name": "MissionProof",
+  "short_name": "MissionProof",
+  "description": "A mobile-first career-planning design fork for turning confirmed service experience into research leads and next actions.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a1224",
+  "theme_color": "#0a1224",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "./assets/missionproof-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explore research leads",
+      "short_name": "Explore",
+      "url": "./app/explore"
+    },
+    {
+      "name": "Open transition plan",
+      "short_name": "Plan",
+      "url": "./app/plan"
+    }
+  ]
+}

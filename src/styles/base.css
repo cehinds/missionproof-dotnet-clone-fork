@@ -1,0 +1,51 @@
+.journey-app {
+  min-height: 100vh;
+  color: var(--mp-color-text);
+  background:
+    radial-gradient(circle at 74% -20%, rgba(64, 89, 242, 0.2), transparent 34rem),
+    var(--mp-color-canvas);
+  font-family: var(--mp-font-body);
+  font-size: var(--mp-font-size-body);
+  line-height: var(--mp-line-height-body);
+}
+
+.journey-app *, .journey-app *::before, .journey-app *::after { box-sizing: border-box; }
+.journey-app button, .journey-app input { font: inherit; }
+.journey-app button { -webkit-tap-highlight-color: transparent; }
+.journey-app h1, .journey-app h2, .journey-app h3, .journey-app p { margin-top: 0; }
+.journey-app h1, .journey-app h2, .journey-app h3 { color: var(--mp-color-text-strong); font-family: var(--mp-font-display); }
+.journey-app h1 { max-width: 24ch; margin-bottom: var(--mp-space-4); font-size: var(--mp-font-size-page-title); line-height: var(--mp-line-height-tight); }
+.journey-app h2 { font-size: var(--mp-font-size-section-title); line-height: var(--mp-line-height-heading); }
+.journey-app h3 { font-size: var(--mp-font-size-body); }
+.journey-app :focus-visible { outline: 0; box-shadow: var(--mp-focus-ring); }
+.journey-app [tabindex="-1"]:focus { outline: 0; box-shadow: none; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.mono-value { font-family: var(--mp-font-mono); }
+
+.journey-eyebrow {
+  margin-bottom: var(--mp-space-2);
+  color: var(--mp-color-information);
+  font-size: var(--mp-font-size-caption);
+  font-weight: var(--mp-font-weight-bold);
+  letter-spacing: var(--mp-letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.journey-progress-label {
+  margin-bottom: var(--mp-space-3);
+  color: var(--mp-color-confirmation);
+  font-weight: var(--mp-font-weight-semibold);
+}
+

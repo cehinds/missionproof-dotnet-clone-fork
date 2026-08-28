@@ -9,12 +9,19 @@ describe("MissionProof critical journeys", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "Enter MissionProof" }));
-    const dialog = screen.getByRole("dialog", { name: "Before you start" });
-    const continueButton = within(dialog).getByRole("button", { name: "Agree & continue" });
+    const heading = await screen.findByRole("heading", { name: "Before you add service information" });
+    const consentScreen = heading.closest("main");
+    const continueButton = within(consentScreen).getByRole("button", { name: "Agree and continue" });
     expect(continueButton).toBeDisabled();
-    await user.click(within(dialog).getByRole("checkbox"));
+    expect(within(consentScreen).getByRole("link", { name: "Terms" })).toHaveAttribute("href", "#missionproof-terms");
+    expect(within(consentScreen).getByRole("link", { name: "Privacy Notice" })).toHaveAttribute("href", "#missionproof-privacy");
+    expect(within(consentScreen).getByRole("heading", { name: "Terms" })).toBeVisible();
+    expect(within(consentScreen).getByText(/does not determine official eligibility/i)).toBeVisible();
+    expect(within(consentScreen).getByRole("heading", { name: "Privacy Notice" })).toBeVisible();
+    expect(within(consentScreen).getByText(/process-local development state/i)).toBeVisible();
+    await user.click(within(consentScreen).getByRole("checkbox"));
     await user.click(continueButton);
-    expect(screen.getByRole("dialog", { name: "What brings you to MissionProof" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "What would make this visit useful?" })).toBeVisible();
   });
 
   it("searches a skill, saves a pathway, and carries it into the plan", async () => {

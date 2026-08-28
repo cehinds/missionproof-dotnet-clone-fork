@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">MissionProof</title>
+  <desc id="description">A cyan and green evidence path inside a dark navy hexagon.</desc>
+  <rect width="1024" height="1024" rx="224" fill="#0a1224"/>
+  <path d="M512 128 824 308v408L512 896 200 716V308Z" fill="#101f3e" stroke="#31d6ff" stroke-width="44"/>
+  <path d="m342 522 116 116 234-260" fill="none" stroke="#6ee7a5" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="342" cy="522" r="30" fill="#31d6ff"/>
+  <circle cx="692" cy="378" r="30" fill="#31d6ff"/>
+</svg>

@@ -4,6 +4,12 @@
 
 Start with a **modular monolith** in ASP.NET Core 10 rather than distributed microservices. The product is still discovering its domain boundaries; one deployable keeps operations and security review understandable while enforcing internal module boundaries that can be separated later.
 
+The primary client delivery is an installable React/Vite Progressive Web App.
+ASP.NET Core remains the same-origin API and can also serve the production PWA.
+This preserves a single mobile/desktop codebase without requiring native mobile
+SDKs. The service worker caches static application resources only; API and user
+data remain network-only.
+
 ```mermaid
 flowchart LR
   U["React web client"] --> G["ASP.NET Core API / BFF"]

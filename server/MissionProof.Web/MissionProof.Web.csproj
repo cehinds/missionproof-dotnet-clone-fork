@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <Target Name="BuildFrontend" BeforeTargets="Build" Condition="'$(SkipFrontendBuild)' != 'true'">
-    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:api" />
   </Target>
 
   <Target Name="PublishFrontend" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="BuildFrontend">
@@ -23,4 +23,3 @@
     </ItemGroup>
   </Target>
 </Project>
-
