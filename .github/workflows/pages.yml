@@ -30,12 +30,14 @@ jobs:
 
       # The prototype gates its own build; a red suite should not reach the site.
       - run: npm test
-      - run: npm run test:sites
 
       # A project site is served from /<repo>/, so the bundle needs that base.
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
+
+      # Runs after the build: its last case asserts the packaging artifacts exist.
+      - run: npm run test:sites
 
       # Stop Pages stripping files and folders that begin with an underscore.
       - run: touch dist/client/.nojekyll
