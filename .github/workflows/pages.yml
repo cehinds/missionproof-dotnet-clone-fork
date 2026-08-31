@@ -1,0 +1,67 @@
+name: Deploy prototype to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Build on pull requests too, so a broken workflow or build is caught before
+  # it reaches main. Pull requests never deploy.
+  pull_request:
+  workflow_dispatch:
+
+# Let a running deploy finish; queue at most one more behind it.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The prototype gates its own build; a red suite should not reach the site.
+      - run: npm test
+
+      # A project site is served from /<repo>/, so the bundle needs that base.
+      - run: npm run build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+
+      # Runs after the build: its last case asserts the packaging artifacts exist.
+      - run: npm run test:sites
+
+      # Stop Pages stripping files and folders that begin with an underscore.
+      - run: touch dist/client/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist/client
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Creates the Pages site on first run so no manual setup is needed.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/deploy-pages@v4
+        id: deployment

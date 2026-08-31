@@ -1,5 +1,12 @@
 /* Static prototype content. No live services are called from the frontend. */
 
+/*
+ * Files in public/ are referenced here as runtime strings, so Vite cannot rewrite them
+ * the way it rewrites imports. Prefixing BASE_URL keeps them resolvable when the app is
+ * served from a subpath, such as a GitHub Pages project site.
+ */
+export const asset = path => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
+
 export const phases = [
   {
     id: "profile",
@@ -55,15 +62,15 @@ export const goalDestinations = {
 };
 
 export const iconSources = {
-  help: "/assets/icons/a85ccba6ec2fcfe6.svg?v=2",
-  bell: "/assets/icons/114ee41050bd9c98.svg?v=2",
-  badge: "/assets/icons/27f5d4948d20a870.svg?v=2",
-  "user-large": "/assets/icons/33a79e8f64b0fbe5.svg?v=2",
-  target: "/assets/icons/23bdc450e0145582.svg?v=2",
-  leaf: "/assets/icons/38c27f8adeb6824a.svg?v=2",
-  retrain: "/assets/icons/0910033787a51fe8.svg?v=2",
-  federal: "/assets/icons/75057a8b1c9bd184.svg?v=2",
-  credentials: "/assets/icons/db8b0c71463c881c.svg?v=2",
+  help: asset("/assets/icons/a85ccba6ec2fcfe6.svg?v=2"),
+  bell: asset("/assets/icons/114ee41050bd9c98.svg?v=2"),
+  badge: asset("/assets/icons/27f5d4948d20a870.svg?v=2"),
+  "user-large": asset("/assets/icons/33a79e8f64b0fbe5.svg?v=2"),
+  target: asset("/assets/icons/23bdc450e0145582.svg?v=2"),
+  leaf: asset("/assets/icons/38c27f8adeb6824a.svg?v=2"),
+  retrain: asset("/assets/icons/0910033787a51fe8.svg?v=2"),
+  federal: asset("/assets/icons/75057a8b1c9bd184.svg?v=2"),
+  credentials: asset("/assets/icons/db8b0c71463c881c.svg?v=2"),
 };
 
 export const profileFields = [
